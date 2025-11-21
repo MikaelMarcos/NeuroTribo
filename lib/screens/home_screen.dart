@@ -1,11 +1,15 @@
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:chewie/chewie.dart';
 import 'package:video_player/video_player.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'login_screen.dart';
+import 'materials_screen.dart';
+import 'challenges_screen.dart';
+import 'community_screen.dart';
+import 'profile_screen.dart';
 
-// --- TELA PRINCIPAL (HOME) ---
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -15,12 +19,28 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final User? user = FirebaseAuth.instance.currentUser;
+  int _selectedIndex = 0; // Controla a barra inferior
+
+  // Função para navegar na barra inferior
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+
+    if (index == 1) {
+      Navigator.push(context, MaterialPageRoute(builder: (context) => const ModulesListScreen()));
+    } else if (index == 2) {
+      Navigator.push(context, MaterialPageRoute(builder: (context) => const ChallengesScreen()));
+    } else if (index == 3) {
+      Navigator.push(context, MaterialPageRoute(builder: (context) => const ProfileScreen()));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F2EA), // Fundo Creme
-      extendBodyBehindAppBar: true, // O conteúdo passa por trás da barra superior
+      backgroundColor: const Color(0xFFF5F2EA),
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -29,11 +49,7 @@ class _HomeScreenState extends State<HomeScreen> {
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [
-                Colors.black.withOpacity(0.8), // Mais escuro no topo para ler o menu
-                Colors.transparent
-              ],
-              stops: const [0.0, 1.0],
+              colors: [Colors.black.withOpacity(0.7), Colors.transparent],
             ),
           ),
         ),
@@ -43,177 +59,104 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         centerTitle: false,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.search, color: Colors.white, size: 28),
-            onPressed: () {},
-          ),
           Padding(
             padding: const EdgeInsets.only(right: 16.0),
-            child: CircleAvatar(
-              backgroundColor: const Color(0xFF8B5A2B),
-              radius: 16,
-              child: Text(
-                user?.displayName?.substring(0, 1).toUpperCase() ?? "M",
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            child: GestureDetector(
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const ProfileScreen())),
+              child: CircleAvatar(
+                backgroundColor: const Color(0xFF8B5A2B),
+                radius: 18,
+                child: Text(
+                  user?.displayName?.substring(0, 1).toUpperCase() ?? "M",
+                  style: const TextStyle(color: Colors.white),
+                ),
               ),
             ),
           ),
         ],
       ),
       body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(), // Efeito elástico ao rolar
+        physics: const BouncingScrollPhysics(),
         padding: const EdgeInsets.only(bottom: 40),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 1. HERO BANNER (Destaque Gigante)
             _buildHeroBanner(context),
-
-            const SizedBox(height: 25),
-
-            // 2. BARRA DE PROGRESSO
+            const SizedBox(height: 20),
             _buildProgressSection(),
-
-            const SizedBox(height: 30),
-
-            // 3. ATALHOS RÁPIDOS
+            const SizedBox(height: 25),
             _buildQuickShortcuts(context),
-
-            const SizedBox(height: 35),
-
-            // 4. ÚLTIMOS LANÇAMENTOS (CORRIGIDO O ERRO DE OVERFLOW AQUI)
-            _buildSectionHeader("Últimos Lançamentos", () {}),
-            const SizedBox(height: 15),
-            _buildVideoCarousel(), // Agora com altura segura
-
             const SizedBox(height: 30),
-            
-            // 5. SEÇÃO EXTRA (Exemplo: Mais vistos)
-            _buildSectionHeader("Continuar Assistindo", () {}),
+            _buildSectionHeader("Últimos Lançamentos"),
             const SizedBox(height: 15),
-            _buildVideoCarousel(isContinueWatching: true),
-
-            const SizedBox(height: 40),
-            _buildLogoutButton(),
+            // AQUI ESTAVA O ERRO: Aumentei para 260 e ajustei o card
+            _buildVideoCarousel(), 
+            const SizedBox(height: 30),
           ],
         ),
       ),
-      bottomNavigationBar: _buildBottomNavigationBar(),
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10)],
+        ),
+        child: BottomNavigationBar(
+          backgroundColor: Colors.white,
+          selectedItemColor: const Color(0xFF8B5A2B),
+          unselectedItemColor: Colors.grey,
+          showUnselectedLabels: true,
+          type: BottomNavigationBarType.fixed,
+          currentIndex: _selectedIndex,
+          onTap: _onItemTapped,
+          items: const [
+            BottomNavigationBarItem(icon: Icon(Icons.home_filled), label: 'Início'),
+            BottomNavigationBarItem(icon: Icon(Icons.play_circle_outline), label: 'Aulas'),
+            BottomNavigationBarItem(icon: Icon(FontAwesomeIcons.bullseye), label: 'Desafios'),
+            BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Perfil'),
+          ],
+        ),
+      ),
     );
   }
 
-  // --- WIDGETS DA HOME ---
+  // --- WIDGETS DA HOME (Mantidos e Ajustados) ---
 
   Widget _buildHeroBanner(BuildContext context) {
     return SizedBox(
-      height: 550, // Altura imponente estilo Netflix
+      height: 500,
       child: Stack(
         children: [
-          // Imagem de Fundo
           Positioned.fill(
-            child: Image.asset(
-              "assets/images/neuroExemploDeAula1.png",
-              fit: BoxFit.cover,
-            ),
+            child: Image.asset("assets/images/neuroExemploDeAula1.png", fit: BoxFit.cover),
           ),
-          // Gradiente Inferior (Para o texto aparecer bem)
-          Positioned.fill(
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.transparent,
-                    Colors.black.withOpacity(0.2),
-                    Colors.black.withOpacity(0.8), // Escurece bem no final
-                    const Color(0xFFF5F2EA), // Funde suavemente com o fundo do app
-                  ],
-                  stops: const [0.4, 0.6, 0.9, 1.0],
-                ),
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Colors.transparent, const Color(0xFFF5F2EA)],
+                stops: const [0.6, 1.0],
               ),
             ),
           ),
-          // Conteúdo do Banner
           Positioned(
-            bottom: 20,
-            left: 20,
-            right: 20,
+            bottom: 20, left: 20, right: 20,
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // Badge "Semana 1"
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF8B5A2B),
-                    borderRadius: BorderRadius.circular(4),
-                    boxShadow: const [BoxShadow(color: Colors.black45, blurRadius: 8, offset: Offset(0, 2))],
-                  ),
-                  child: const Text(
-                    "SEMANA 1", 
-                    style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1),
-                  ),
+                  decoration: BoxDecoration(color: const Color(0xFF8B5A2B), borderRadius: BorderRadius.circular(20)),
+                  child: const Text("SEMANA 1", style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
                 ),
-                const SizedBox(height: 15),
-                
-                // Título Principal
-                const Text(
-                  "NEUROPLASTICIDADE",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 32,
-                    fontWeight: FontWeight.w900,
-                    shadows: [Shadow(color: Colors.black, blurRadius: 20, offset: Offset(0, 4))],
-                  ),
-                ),
-                const SizedBox(height: 8),
-                
-                // Subtítulo
-                const Text(
-                  "Descubra como reprogramar seu cérebro com ações consistentes.",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.white70, fontSize: 14, height: 1.4),
-                ),
-                const SizedBox(height: 25),
-                
-                // Botões (Play e Minha Lista)
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.push(context, MaterialPageRoute(
-                          builder: (context) => const VideoDetailScreen(
-                            title: "Neuroplasticidade: O Início", 
-                            videoUrl: "https://flutter.github.io/assets-for-api-docs/assets/videos/butterfly.mp4"
-                          )
-                        ));
-                      },
-                      icon: const Icon(Icons.play_arrow, color: Colors.white),
-                      label: const Text("Assistir", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF8B5A2B),
-                        padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      ),
-                    ),
-                    const SizedBox(width: 15),
-                    OutlinedButton.icon(
-                      onPressed: () {},
-                      icon: const Icon(Icons.add, color: Colors.white),
-                      label: const Text("Minha Lista", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: Colors.white, width: 2),
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        backgroundColor: Colors.black26,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 30), // Espaço extra no final do banner
+                const SizedBox(height: 10),
+                const Text("NEUROPLASTICIDADE", textAlign: TextAlign.center, style: TextStyle(color: Color(0xFF333333), fontSize: 30, fontWeight: FontWeight.w900)),
+                const Text("Sua mente muda com ações consistentes.", style: TextStyle(color: Colors.grey)),
+                const SizedBox(height: 20),
+                ElevatedButton.icon(
+                  onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const ModulesListScreen())),
+                  icon: const Icon(Icons.play_arrow, color: Colors.white),
+                  label: const Text("Continuar", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF8B5A2B)),
+                )
               ],
             ),
           )
@@ -227,40 +170,20 @@ class _HomeScreenState extends State<HomeScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Container(
         padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
-        ),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
         child: Row(
           children: [
-            Stack(
-              alignment: Alignment.center,
-              children: [
-                SizedBox(
-                  width: 50, height: 50,
-                  child: CircularProgressIndicator(
-                    value: 0.4,
-                    backgroundColor: Colors.grey.shade200,
-                    color: const Color(0xFF8B5A2B),
-                    strokeWidth: 5,
-                  ),
-                ),
-                const Text("40%", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF8B5A2B))),
-              ],
-            ),
+            const CircularProgressIndicator(value: 0.4, color: Color(0xFF8B5A2B), backgroundColor: Color(0xFFEEEEEE)),
             const SizedBox(width: 15),
             const Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text("Progresso da Jornada", style: TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.w600)),
-                  SizedBox(height: 4),
-                  Text("Você está indo muito bem!", style: TextStyle(color: Color(0xFF4A4A4A), fontWeight: FontWeight.bold, fontSize: 15)),
+                  Text("Progresso Mensal", style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF8B5A2B))),
+                  Text("Você concluiu 40% da jornada.", style: TextStyle(fontSize: 12)),
                 ],
               ),
             ),
-            const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
           ],
         ),
       ),
@@ -268,175 +191,74 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildQuickShortcuts(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          _buildShortcutItem(context, Icons.play_circle_fill, "Aulas", const ModulesListScreen()),
-          _buildShortcutItem(context, Icons.book, "Materiais", null),
-          _buildShortcutItem(context, FontAwesomeIcons.bullseye, "Desafios", null),
-          _buildShortcutItem(context, Icons.groups, "Tribo", null),
-        ],
-      ),
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: [
+        _shortcut(context, Icons.play_circle_fill, "Aulas", const ModulesListScreen()),
+        _shortcut(context, Icons.menu_book, "Materiais", const MaterialsScreen()),
+        _shortcut(context, FontAwesomeIcons.bullseye, "Desafios", const ChallengesScreen()),
+        _shortcut(context, Icons.groups, "Tribo", const CommunityScreen()),
+      ],
     );
   }
 
-  Widget _buildShortcutItem(BuildContext context, IconData icon, String label, Widget? destination) {
+  Widget _shortcut(BuildContext context, IconData icon, String label, Widget page) {
     return GestureDetector(
-      onTap: () {
-        if (destination != null) {
-          Navigator.push(context, MaterialPageRoute(builder: (context) => destination));
-        }
-      },
+      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => page)),
       child: Column(
         children: [
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-              boxShadow: [BoxShadow(color: const Color(0xFF8B5A2B).withOpacity(0.15), blurRadius: 10, offset: const Offset(0, 4))],
-            ),
-            child: Icon(icon, color: const Color(0xFF8B5A2B), size: 24),
-          ),
-          const SizedBox(height: 8),
-          Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF555555))),
+          CircleAvatar(radius: 25, backgroundColor: Colors.white, child: Icon(icon, color: const Color(0xFF8B5A2B))),
+          const SizedBox(height: 5),
+          Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF555555))),
         ],
       ),
     );
   }
 
-  Widget _buildSectionHeader(String title, VoidCallback onTap) {
+  Widget _buildSectionHeader(String title) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFF333333))),
-          GestureDetector(
-            onTap: onTap,
-            child: const Text("Ver tudo", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF8B5A2B))),
-          ),
-        ],
-      ),
+      child: Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFF333333))),
     );
   }
 
-  // --- AQUI ESTAVA O PROBLEMA DO OVERFLOW (CORRIGIDO) ---
-  Widget _buildVideoCarousel({bool isContinueWatching = false}) {
+  Widget _buildVideoCarousel() {
     return SizedBox(
-      // AUMENTADO DE 220 PARA 260 PARA CABER TUDO SEM ERRO
-      height: 260, 
+      height: 260, // Altura segura para evitar overflow
       child: ListView(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.only(left: 20, right: 10),
-        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.only(left: 20),
         children: [
-          _buildVideoCard("Neuroplasticidade", "Aula 1 • Fundamentos", "https://assets.mixkit.co/videos/preview/mixkit-waves-in-the-water-1164-large.mp4"),
-          _buildVideoCard("Detox de Dopamina", "Aula 2 • Prática", "https://assets.mixkit.co/videos/preview/mixkit-tree-with-yellow-flowers-1173-large.mp4"),
-          _buildVideoCard("Rotina Matinal", "Extra • Alta Performance", "https://assets.mixkit.co/videos/preview/mixkit-stars-in-space-1610-large.mp4"),
-          _buildVideoCard("Sono Profundo", "Aula 3 • Recuperação", "https://flutter.github.io/assets-for-api-docs/assets/videos/butterfly.mp4"),
+          _videoCard("Neuroplasticidade", "Aula 1", "https://assets.mixkit.co/videos/preview/mixkit-waves-in-the-water-1164-large.mp4"),
+          _videoCard("Dopamina Detox", "Aula 2", "https://assets.mixkit.co/videos/preview/mixkit-tree-with-yellow-flowers-1173-large.mp4"),
+          _videoCard("Rotina Matinal", "Extra", "https://assets.mixkit.co/videos/preview/mixkit-stars-in-space-1610-large.mp4"),
         ],
       ),
     );
   }
 
-  Widget _buildVideoCard(String title, String subtitle, String videoUrl) {
+  Widget _videoCard(String title, String subtitle, String url) {
     return GestureDetector(
-      onTap: () {
-        Navigator.push(context, MaterialPageRoute(builder: (context) => VideoDetailScreen(title: title, videoUrl: videoUrl)));
-      },
+      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => VideoDetailScreen(title: title, videoUrl: url))),
       child: Container(
         width: 160,
-        margin: const EdgeInsets.only(right: 16),
+        margin: const EdgeInsets.only(right: 15),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // THUMBNAIL
             Container(
-              height: 160, // Formato Vertical (Capa de Filme)
+              height: 160,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, 4))],
-                image: const DecorationImage(
-                  image: AssetImage("assets/images/neuroExemploDeAula1.png"),
-                  fit: BoxFit.cover,
-                ),
+                image: const DecorationImage(image: AssetImage("assets/images/neuroExemploDeAula1.png"), fit: BoxFit.cover),
               ),
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  gradient: LinearGradient(
-                    begin: Alignment.bottomCenter,
-                    end: Alignment.topCenter,
-                    colors: [Colors.black.withOpacity(0.6), Colors.transparent],
-                  ),
-                ),
-                child: const Center(
-                  child: Icon(Icons.play_circle_fill, color: Colors.white70, size: 40),
-                ),
-              ),
+              child: const Center(child: Icon(Icons.play_circle_fill, color: Colors.white70, size: 40)),
             ),
-            const SizedBox(height: 10),
-            
-            // INFORMAÇÕES
-            Text(
-              title, 
-              maxLines: 1, 
-              overflow: TextOverflow.ellipsis, // Corta com "..." se for grande demais
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF333333)),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              subtitle, 
-              maxLines: 2, // Permite 2 linhas
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 11, color: Color(0xFF888888), height: 1.2),
-            ),
+            const SizedBox(height: 8),
+            Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold)),
+            Text(subtitle, style: const TextStyle(fontSize: 12, color: Colors.grey)),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildLogoutButton() {
-    return Center(
-      child: TextButton.icon(
-        onPressed: () async {
-          await FirebaseAuth.instance.signOut();
-          if (mounted) Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const LoginScreen()));
-        },
-        icon: const Icon(Icons.logout_rounded, color: Colors.grey, size: 18),
-        label: const Text("Sair da conta", style: TextStyle(color: Colors.grey, fontSize: 14)),
-      ),
-    );
-  }
-
-  Widget _buildBottomNavigationBar() {
-    return Container(
-      decoration: BoxDecoration(
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20, offset: const Offset(0, -5))],
-      ),
-      child: BottomNavigationBar(
-        backgroundColor: Colors.white,
-        selectedItemColor: const Color(0xFF8B5A2B),
-        unselectedItemColor: Colors.grey.shade400,
-        showUnselectedLabels: true,
-        type: BottomNavigationBarType.fixed,
-        elevation: 0,
-        selectedFontSize: 12,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home_filled), label: 'Início'),
-          BottomNavigationBarItem(icon: Icon(Icons.play_circle_outline), label: 'Aulas'),
-          BottomNavigationBarItem(icon: Icon(Icons.emoji_events_outlined), label: 'Desafios'),
-          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Perfil'),
-        ],
-        onTap: (index) {
-          if (index == 1) {
-             Navigator.push(context, MaterialPageRoute(builder: (context) => const ModulesListScreen()));
-          }
-        },
       ),
     );
   }
