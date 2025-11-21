@@ -1,8 +1,7 @@
-
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:chewie/chewie.dart';
 import 'package:video_player/video_player.dart';
+import 'package:chewie/chewie.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'login_screen.dart';
 import 'materials_screen.dart';
@@ -19,25 +18,65 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final User? user = FirebaseAuth.instance.currentUser;
-  int _selectedIndex = 0; // Controla a barra inferior
+  int _selectedIndex = 0;
 
-  // Função para navegar na barra inferior
+  // Lista das telas para a navegação do rodapé
+  final List<Widget> _screens = [
+    const HomeContent(),      // 0: Início
+    const MaterialsScreen(),  // 1: Materiais (Novo)
+    const ChallengesScreen(), // 2: Desafios
+    const CommunityScreen(),  // 3: Tribo (Novo)
+    const ProfileScreen(),    // 4: Perfil
+  ];
+
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
     });
-
-    if (index == 1) {
-      Navigator.push(context, MaterialPageRoute(builder: (context) => const ModulesListScreen()));
-    } else if (index == 2) {
-      Navigator.push(context, MaterialPageRoute(builder: (context) => const ChallengesScreen()));
-    } else if (index == 3) {
-      Navigator.push(context, MaterialPageRoute(builder: (context) => const ProfileScreen()));
-    }
   }
 
   @override
   Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F2EA),
+      // Exibe a tela correspondente ao índice selecionado
+      body: _selectedIndex == 0 
+          ? const HomeContent() // Se for Home, usa o layout complexo com AppBar
+          : _screens[_selectedIndex], // Se for outra, carrega a tela direta
+      
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10)],
+        ),
+        child: BottomNavigationBar(
+          backgroundColor: Colors.white,
+          selectedItemColor: const Color(0xFF8B5A2B),
+          unselectedItemColor: Colors.grey,
+          showUnselectedLabels: true,
+          type: BottomNavigationBarType.fixed, // Importante para 5 itens
+          currentIndex: _selectedIndex,
+          onTap: _onItemTapped,
+          items: const [
+            BottomNavigationBarItem(icon: Icon(Icons.home_filled), label: 'Início'),
+            BottomNavigationBarItem(icon: Icon(Icons.menu_book_rounded), label: 'Materiais'),
+            BottomNavigationBarItem(icon: Icon(FontAwesomeIcons.bullseye), label: 'Desafios'),
+            BottomNavigationBarItem(icon: Icon(Icons.groups), label: 'Tribo'),
+            BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Perfil'),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// Separei o conteúdo da Home para organizar o código
+class HomeContent extends StatelessWidget {
+  const HomeContent({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final User? user = FirebaseAuth.instance.currentUser;
+    
     return Scaffold(
       backgroundColor: const Color(0xFFF5F2EA),
       extendBodyBehindAppBar: true,
@@ -53,23 +92,17 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
         ),
-        title: Image.asset(
-          'assets/images/logo_neurotribo_semfundo.png', 
-          height: 45,
-        ),
+        title: Image.asset('assets/images/logo_neurotribo_semfundo.png', height: 45),
         centerTitle: false,
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 16.0),
-            child: GestureDetector(
-              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const ProfileScreen())),
-              child: CircleAvatar(
-                backgroundColor: const Color(0xFF8B5A2B),
-                radius: 18,
-                child: Text(
-                  user?.displayName?.substring(0, 1).toUpperCase() ?? "M",
-                  style: const TextStyle(color: Colors.white),
-                ),
+            child: CircleAvatar(
+              backgroundColor: const Color(0xFF8B5A2B),
+              radius: 18,
+              child: Text(
+                user?.displayName?.substring(0, 1).toUpperCase() ?? "M",
+                style: const TextStyle(color: Colors.white),
               ),
             ),
           ),
@@ -85,49 +118,25 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 20),
             _buildProgressSection(),
             const SizedBox(height: 25),
-            _buildQuickShortcuts(context),
-            const SizedBox(height: 30),
+            // _buildQuickShortcuts removido pois agora estão no rodapé
             _buildSectionHeader("Últimos Lançamentos"),
             const SizedBox(height: 15),
-            // AQUI ESTAVA O ERRO: Aumentei para 260 e ajustei o card
             _buildVideoCarousel(), 
             const SizedBox(height: 30),
-          ],
-        ),
-      ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10)],
-        ),
-        child: BottomNavigationBar(
-          backgroundColor: Colors.white,
-          selectedItemColor: const Color(0xFF8B5A2B),
-          unselectedItemColor: Colors.grey,
-          showUnselectedLabels: true,
-          type: BottomNavigationBarType.fixed,
-          currentIndex: _selectedIndex,
-          onTap: _onItemTapped,
-          items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.home_filled), label: 'Início'),
-            BottomNavigationBarItem(icon: Icon(Icons.play_circle_outline), label: 'Aulas'),
-            BottomNavigationBarItem(icon: Icon(FontAwesomeIcons.bullseye), label: 'Desafios'),
-            BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Perfil'),
           ],
         ),
       ),
     );
   }
 
-  // --- WIDGETS DA HOME (Mantidos e Ajustados) ---
-
+  // --- WIDGETS AUXILIARES DA HOME ---
+  
   Widget _buildHeroBanner(BuildContext context) {
     return SizedBox(
       height: 500,
       child: Stack(
         children: [
-          Positioned.fill(
-            child: Image.asset("assets/images/neuroExemploDeAula1.png", fit: BoxFit.cover),
-          ),
+          Positioned.fill(child: Image.asset("assets/images/neuroExemploDeAula1.png", fit: BoxFit.cover)),
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -152,7 +161,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 const Text("Sua mente muda com ações consistentes.", style: TextStyle(color: Colors.grey)),
                 const SizedBox(height: 20),
                 ElevatedButton.icon(
-                  onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const ModulesListScreen())),
+                  onPressed: () {}, // Pode levar para Aulas
                   icon: const Icon(Icons.play_arrow, color: Colors.white),
                   label: const Text("Continuar", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                   style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF8B5A2B)),
@@ -190,31 +199,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildQuickShortcuts(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: [
-        _shortcut(context, Icons.play_circle_fill, "Aulas", const ModulesListScreen()),
-        _shortcut(context, Icons.menu_book, "Materiais", const MaterialsScreen()),
-        _shortcut(context, FontAwesomeIcons.bullseye, "Desafios", const ChallengesScreen()),
-        _shortcut(context, Icons.groups, "Tribo", const CommunityScreen()),
-      ],
-    );
-  }
-
-  Widget _shortcut(BuildContext context, IconData icon, String label, Widget page) {
-    return GestureDetector(
-      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => page)),
-      child: Column(
-        children: [
-          CircleAvatar(radius: 25, backgroundColor: Colors.white, child: Icon(icon, color: const Color(0xFF8B5A2B))),
-          const SizedBox(height: 5),
-          Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF555555))),
-        ],
-      ),
-    );
-  }
-
   Widget _buildSectionHeader(String title) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -224,7 +208,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildVideoCarousel() {
     return SizedBox(
-      height: 260, // Altura segura para evitar overflow
+      height: 260,
       child: ListView(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.only(left: 20),
@@ -238,27 +222,24 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _videoCard(String title, String subtitle, String url) {
-    return GestureDetector(
-      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => VideoDetailScreen(title: title, videoUrl: url))),
-      child: Container(
-        width: 160,
-        margin: const EdgeInsets.only(right: 15),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              height: 160,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                image: const DecorationImage(image: AssetImage("assets/images/neuroExemploDeAula1.png"), fit: BoxFit.cover),
-              ),
-              child: const Center(child: Icon(Icons.play_circle_fill, color: Colors.white70, size: 40)),
+    return Container(
+      width: 160,
+      margin: const EdgeInsets.only(right: 15),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            height: 160,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              image: const DecorationImage(image: AssetImage("assets/images/neuroExemploDeAula1.png"), fit: BoxFit.cover),
             ),
-            const SizedBox(height: 8),
-            Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold)),
-            Text(subtitle, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-          ],
-        ),
+            child: const Center(child: Icon(Icons.play_circle_fill, color: Colors.white70, size: 40)),
+          ),
+          const SizedBox(height: 8),
+          Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold)),
+          Text(subtitle, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+        ],
       ),
     );
   }

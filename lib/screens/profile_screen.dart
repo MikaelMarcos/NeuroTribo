@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'login_screen.dart';
+import '../user_data.dart'; // Importa o gerenciador de XP
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -14,36 +15,61 @@ class ProfileScreen extends StatelessWidget {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            Container(
-              padding: const EdgeInsets.only(top: 60, bottom: 30),
-              width: double.infinity,
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(bottom: Radius.circular(30)),
-              ),
-              child: Column(
-                children: [
-                  CircleAvatar(
-                    radius: 50,
-                    backgroundColor: const Color(0xFF8B5A2B),
-                    child: Text(user?.displayName?[0].toUpperCase() ?? "M", style: const TextStyle(fontSize: 40, color: Colors.white)),
+            Stack(
+              children: [
+                Container(
+                  padding: const EdgeInsets.only(top: 60, bottom: 30),
+                  width: double.infinity,
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.vertical(bottom: Radius.circular(30)),
+                    boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, 5))],
                   ),
-                  const SizedBox(height: 15),
-                  Text(user?.displayName ?? "Membro NeuroTribo", style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-                  Text(user?.email ?? "", style: const TextStyle(color: Colors.grey)),
-                  const SizedBox(height: 20),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                  child: Column(
                     children: [
-                      _stat("12", "Dias seguidos"),
-                      Container(height: 30, width: 1, color: Colors.grey.shade300, margin: const EdgeInsets.symmetric(horizontal: 20)),
-                      _stat("4", "Módulos"),
-                      Container(height: 30, width: 1, color: Colors.grey.shade300, margin: const EdgeInsets.symmetric(horizontal: 20)),
-                      _stat("8", "Conquistas"),
+                      CircleAvatar(
+                        radius: 50,
+                        backgroundColor: const Color(0xFF8B5A2B),
+                        child: Text(user?.displayName?[0].toUpperCase() ?? "M", style: const TextStyle(fontSize: 40, color: Colors.white)),
+                      ),
+                      const SizedBox(height: 15),
+                      Text(user?.displayName ?? "Membro NeuroTribo", style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF4A4A4A))),
+                      Text(user?.email ?? "", style: const TextStyle(color: Colors.grey)),
+                      
+                      const SizedBox(height: 10),
+                      
+                      // MOSTRAR XP EM TEMPO REAL
+                      ValueListenableBuilder<int>(
+                        valueListenable: UserData.totalXP,
+                        builder: (context, xp, child) {
+                          return Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(color: const Color(0xFF8B5A2B).withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
+                            child: Text("$xp XP", style: const TextStyle(color: Color(0xFF8B5A2B), fontWeight: FontWeight.w900, fontSize: 14)),
+                          );
+                        },
+                      ),
+
+                      const SizedBox(height: 20),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          _stat("12", "Dias seguidos"),
+                          Container(height: 30, width: 1, color: Colors.grey.shade300, margin: const EdgeInsets.symmetric(horizontal: 20)),
+                          _stat("4", "Módulos"),
+                          Container(height: 30, width: 1, color: Colors.grey.shade300, margin: const EdgeInsets.symmetric(horizontal: 20)),
+                          _stat("8", "Conquistas"),
+                        ],
+                      )
                     ],
-                  )
-                ],
-              ),
+                  ),
+                ),
+                // BOTÃO VOLTAR
+                Positioned(
+                  top: 40, left: 10,
+                  child: IconButton(icon: const Icon(Icons.arrow_back, color: Color(0xFF8B5A2B)), onPressed: () => Navigator.pop(context)),
+                ),
+              ],
             ),
             
             Padding(
@@ -51,10 +77,10 @@ class ProfileScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text("Minhas Conquistas", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                  const Text("Minhas Conquistas", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF4A4A4A))),
                   const SizedBox(height: 15),
                   SizedBox(
-                    height: 80,
+                    height: 90,
                     child: ListView(
                       scrollDirection: Axis.horizontal,
                       children: [
@@ -62,17 +88,19 @@ class ProfileScreen extends StatelessWidget {
                         _badge(Icons.timer, "Focado", true),
                         _badge(Icons.book, "Leitor", false),
                         _badge(Icons.star, "VIP", false),
+                        _badge(Icons.rocket_launch, "Imparável", false),
                       ],
                     ),
                   ),
                   
                   const SizedBox(height: 30),
                   _menuItem(Icons.settings, "Configurações"),
+                  _menuItem(Icons.notifications, "Notificações"),
                   _menuItem(Icons.help_outline, "Ajuda e Suporte"),
                   const SizedBox(height: 20),
                   ListTile(
                     leading: const Icon(Icons.logout, color: Colors.red),
-                    title: const Text("Sair da Conta", style: TextStyle(color: Colors.red)),
+                    title: const Text("Sair da Conta", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
                     onTap: () async {
                       await FirebaseAuth.instance.signOut();
                       if (context.mounted) {
@@ -102,27 +130,33 @@ class ProfileScreen extends StatelessWidget {
     return Container(
       width: 70,
       margin: const EdgeInsets.only(right: 15),
+      padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: earned ? const Color(0xFF8B5A2B).withOpacity(0.1) : Colors.grey.shade200,
-        borderRadius: BorderRadius.circular(10),
+        color: earned ? const Color(0xFF8B5A2B).withOpacity(0.1) : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: earned ? Colors.transparent : Colors.grey.shade200),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, color: earned ? const Color(0xFF8B5A2B) : Colors.grey),
-          const SizedBox(height: 5),
-          Text(label, style: TextStyle(fontSize: 10, color: earned ? const Color(0xFF8B5A2B) : Colors.grey)),
+          Icon(icon, color: earned ? const Color(0xFF8B5A2B) : Colors.grey.shade300, size: 28),
+          const SizedBox(height: 8),
+          Text(label, textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: earned ? const Color(0xFF8B5A2B) : Colors.grey)),
         ],
       ),
     );
   }
 
   Widget _menuItem(IconData icon, String title) {
-    return ListTile(
-      leading: Icon(icon, color: const Color(0xFF4A4A4A)),
-      title: Text(title),
-      trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
-      onTap: () {},
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+      child: ListTile(
+        leading: Icon(icon, color: const Color(0xFF4A4A4A)),
+        title: Text(title, style: const TextStyle(color: Color(0xFF4A4A4A), fontWeight: FontWeight.w500)),
+        trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+        onTap: () {},
+      ),
     );
   }
 }

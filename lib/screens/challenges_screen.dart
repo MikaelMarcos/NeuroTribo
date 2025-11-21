@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import '../user_data.dart'; // Importa nosso gerenciador de XP
 
 // --- TELA DE LISTA DE DESAFIOS ---
 class ChallengesScreen extends StatelessWidget {
@@ -14,6 +15,20 @@ class ChallengesScreen extends StatelessWidget {
         elevation: 0,
         iconTheme: const IconThemeData(color: Color(0xFF8B5A2B)),
         title: const Text("Desafios", style: TextStyle(color: Color(0xFF4A4A4A), fontWeight: FontWeight.bold)),
+        // Mostra o XP atual no topo
+        actions: [
+          ValueListenableBuilder(
+            valueListenable: UserData.totalXP, 
+            builder: (context, value, child) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 20.0),
+                  child: Text("$value XP", style: const TextStyle(color: Color(0xFF8B5A2B), fontWeight: FontWeight.w900)),
+                ),
+              );
+            }
+          )
+        ],
       ),
       body: ListView(
         padding: const EdgeInsets.all(20),
@@ -21,7 +36,6 @@ class ChallengesScreen extends StatelessWidget {
           // CARD DE DESTAQUE
           GestureDetector(
             onTap: () {
-              // Abre o detalhe do desafio
               Navigator.push(context, MaterialPageRoute(
                 builder: (context) => const ChallengeDetailScreen(title: "7 Dias de Foco Extremo")
               ));
@@ -60,7 +74,7 @@ class ChallengesScreen extends StatelessWidget {
                   const SizedBox(height: 20),
                   LinearProgressIndicator(value: 0.3, backgroundColor: Colors.white24, color: Colors.white, minHeight: 6, borderRadius: BorderRadius.circular(10)),
                   const SizedBox(height: 8),
-                  const Text("Toque para ver seu progresso diário", style: TextStyle(color: Colors.white, fontSize: 12, fontStyle: FontStyle.italic)),
+                  const Text("Ganhe +1 XP por tarefa concluída", style: TextStyle(color: Colors.yellowAccent, fontSize: 12, fontWeight: FontWeight.bold)),
                 ],
               ),
             ),
@@ -118,7 +132,7 @@ class ChallengesScreen extends StatelessWidget {
   }
 }
 
-// --- TELA DE DETALHE DO DESAFIO (HEATMAP + CHECKLIST) ---
+// --- TELA DE DETALHE DO DESAFIO ---
 class ChallengeDetailScreen extends StatefulWidget {
   final String title;
   const ChallengeDetailScreen({super.key, required this.title});
@@ -128,14 +142,16 @@ class ChallengeDetailScreen extends StatefulWidget {
 }
 
 class _ChallengeDetailScreenState extends State<ChallengeDetailScreen> {
-  // Simulação de tarefas do dia
   List<Map<String, dynamic>> dailyTasks = [
-    {"title": "Meditação de 10min", "done": true},
-    {"title": "Beber 2L de água", "done": true},
+    {"title": "Meditação de 10min", "done": false},
+    {"title": "Beber 2L de água", "done": false},
     {"title": "Ler 10 páginas", "done": false},
     {"title": "Sem redes sociais pela manhã", "done": false},
     {"title": "Dormir antes das 23h", "done": false},
   ];
+
+  // Calcula o XP a ser ganho hoje
+  int get xpToCollect => dailyTasks.where((t) => t['done']).length;
 
   @override
   Widget build(BuildContext context) {
@@ -152,10 +168,11 @@ class _ChallengeDetailScreenState extends State<ChallengeDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 1. HEATMAP (GRÁFICO GITHUB)
+            // HEATMAP
             const Text("Sua Consistência", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF4A4A4A))),
             const SizedBox(height: 10),
             Container(
+              width: double.infinity,
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: Colors.white,
@@ -164,26 +181,22 @@ class _ChallengeDetailScreenState extends State<ChallengeDetailScreen> {
               ),
               child: Column(
                 children: [
-                  // Gráfico construído manualmente
-                  _buildGithubHeatmap(),
-                  const SizedBox(height: 15),
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _legendItem(Colors.grey.shade200, "Vazio"),
-                      const SizedBox(width: 10),
-                      _legendItem(const Color(0xFFD7CCC8), "Pouco"), // Marrom claro
-                      const SizedBox(width: 10),
-                      _legendItem(const Color(0xFF8B5A2B), "Muito"), // Marrom forte
+                      Text(_getMonthName(DateTime.now().month), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey)),
+                      const Icon(Icons.calendar_today, size: 16, color: Colors.grey),
                     ],
-                  )
+                  ),
+                  const SizedBox(height: 15),
+                  _buildGithubHeatmap(),
                 ],
               ),
             ),
 
             const SizedBox(height: 30),
 
-            // 2. CHECKLIST DO DIA
+            // CHECKLIST DO DIA
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -191,13 +204,12 @@ class _ChallengeDetailScreenState extends State<ChallengeDetailScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(color: const Color(0xFF8B5A2B).withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
-                  child: Text("Dia 2", style: TextStyle(color: const Color(0xFF8B5A2B), fontWeight: FontWeight.bold)),
+                  child: Text("XP a recolher: +$xpToCollect", style: const TextStyle(color: Color(0xFF8B5A2B), fontWeight: FontWeight.bold)),
                 )
               ],
             ),
             const SizedBox(height: 15),
             
-            // Lista de Checkboxes
             ...dailyTasks.map((task) {
               return Container(
                 margin: const EdgeInsets.only(bottom: 10),
@@ -228,15 +240,23 @@ class _ChallengeDetailScreenState extends State<ChallengeDetailScreen> {
 
             const SizedBox(height: 20),
             
-            // Botão Salvar
+            // BOTÃO CONCLUIR DIA (COM SOMA DE XP)
             SizedBox(
               width: double.infinity,
               height: 50,
               child: ElevatedButton(
                 onPressed: () {
+                  // 1. Adiciona o XP
+                  UserData.addXP(xpToCollect);
+
+                  // 2. Feedback visual
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Progresso salvo com sucesso! Continue assim!"), backgroundColor: Colors.green)
+                    SnackBar(
+                      content: Text("Dia concluído! Você ganhou +$xpToCollect XP!"), 
+                      backgroundColor: Colors.green
+                    )
                   );
+                  
                   Navigator.pop(context);
                 },
                 style: ElevatedButton.styleFrom(
@@ -252,50 +272,57 @@ class _ChallengeDetailScreenState extends State<ChallengeDetailScreen> {
     );
   }
 
-  // Construtor do Gráfico Heatmap (Estilo GitHub)
   Widget _buildGithubHeatmap() {
-    // Simulação de 28 dias (4 semanas)
-    // 0 = não fez, 1 = fez pouco, 2 = fez tudo
-    final List<int> activityData = [
-      0, 1, 2, 2, 1, 0, 0,
-      1, 2, 2, 2, 1, 0, 1,
-      2, 2, 0, 0, 1, 2, 2,
-      1, 2, 0, 0, 0, 0, 0 // Última semana (hoje está aqui)
-    ];
+    final now = DateTime.now();
+    final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
+    
+    final List<int> activityData = List.generate(daysInMonth, (index) {
+      return (index % 3 == 0) ? 2 : (index % 4 == 0) ? 0 : 1;
+    });
 
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: 28,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 7, // 7 dias da semana
-        crossAxisSpacing: 6,
-        mainAxisSpacing: 6,
-      ),
-      itemBuilder: (context, index) {
-        int level = activityData[index];
-        Color color;
-        if (level == 0) color = Colors.grey.shade200;
-        else if (level == 1) color = const Color(0xFFD7CCC8); // Marrom claro
-        else color = const Color(0xFF8B5A2B); // Marrom forte (NeuroTribo)
-
-        return Container(
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(4),
+    return Center(
+      child: SizedBox(
+        width: 240, 
+        child: GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: daysInMonth,
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 7,
+            crossAxisSpacing: 4,
+            mainAxisSpacing: 4,
+            childAspectRatio: 1.0,
           ),
-        );
-      },
+          itemBuilder: (context, index) {
+            int level = activityData[index];
+            Color color;
+            if (level == 0) color = Colors.grey.shade200;
+            else if (level == 1) color = const Color(0xFFD7CCC8);
+            else color = const Color(0xFF8B5A2B);
+
+            bool isToday = (index + 1) == now.day;
+
+            return Container(
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(4),
+                border: isToday ? Border.all(color: Colors.black54, width: 2) : null,
+              ),
+              child: Center(
+                child: Text(
+                  "${index + 1}",
+                  style: TextStyle(fontSize: 8, color: level == 2 ? Colors.white : Colors.black38, fontWeight: FontWeight.bold),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
     );
   }
 
-  Widget _legendItem(Color color, String label) {
-    return Row(
-      children: [
-        Container(width: 12, height: 12, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2))),
-        const SizedBox(width: 4),
-        Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey)),
-      ],
-    );
+  String _getMonthName(int month) {
+    const months = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+    return months[month - 1];
   }
 }
