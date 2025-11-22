@@ -3,8 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:video_player/video_player.dart';
 import 'package:chewie/chewie.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:youtube_player_iframe/youtube_player_iframe.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'login_screen.dart';
 import 'materials_screen.dart';
 import 'challenges_screen.dart';
@@ -32,7 +32,7 @@ class _HomeScreenState extends State<HomeScreen> {
   ];
 
   void _onItemTapped(int index) {
-    SoundManager.playClick(); 
+    SoundManager.playClick();
     setState(() {
       _selectedIndex = index;
     });
@@ -118,7 +118,7 @@ class HomeContent extends StatelessWidget {
             const SizedBox(height: 25),
             _buildSectionHeader("Últimos Lançamentos"),
             const SizedBox(height: 15),
-            _buildVideoCarousel(context), // CORREÇÃO: Passar context aqui
+            _buildVideoCarousel(context),
             const SizedBox(height: 30),
           ],
         ),
@@ -203,7 +203,6 @@ class HomeContent extends StatelessWidget {
     );
   }
 
-  // CORREÇÃO: Receber context como parâmetro
   Widget _buildVideoCarousel(BuildContext context) {
     return SizedBox(
       height: 260,
@@ -219,7 +218,6 @@ class HomeContent extends StatelessWidget {
     );
   }
 
-  // CORREÇÃO: Receber context como parâmetro
   Widget _videoCard(BuildContext context, String title, String subtitle, String url) {
     return GestureDetector(
       onTap: () {
@@ -350,7 +348,6 @@ class ModulesListScreen extends StatelessWidget {
   }
 }
 
-// --- TELA DE DETALHES DO VÍDEO (AGORA UNIVERSAL: YOUTUBE + MP4) ---
 class VideoDetailScreen extends StatefulWidget {
   final String title;
   final String videoUrl;

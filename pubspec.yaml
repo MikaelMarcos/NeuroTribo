@@ -15,18 +15,21 @@ dependencies:
   google_fonts: ^6.1.0
   font_awesome_flutter: ^10.6.0
 
-  # Vídeo e Áudio (NOVO)
+  # Vídeo e Áudio
   video_player: ^2.8.1
   chewie: ^1.7.1
-  audioplayers: ^5.2.1 # Pacote de sons
-  youtube_player_iframe: ^5.1.2
+  audioplayers: ^5.2.1
+  
+  # Utilitários (NOVO)
   url_launcher: ^6.2.5
+  timeago: ^3.6.1 # ADICIONADO AGORA PARA CORRIGIR O ERRO
 
-  # Firebase
+  # Firebase e Backend
   firebase_core: ^2.27.0
   firebase_auth: ^4.17.9
   cloud_firestore: ^4.15.5
   google_sign_in: ^6.2.1
+  youtube_player_iframe: ^5.1.2
 
 dev_dependencies:
   flutter_test:
@@ -36,7 +39,6 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   
-  # Registrar pastas de arquivos
   assets:
     - assets/images/
-    - assets/audio/ # Pasta nova de sons
+    - assets/audio/

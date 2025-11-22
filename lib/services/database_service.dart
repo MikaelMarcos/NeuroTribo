@@ -3,68 +3,86 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../user_data.dart';
 
 class DatabaseService {
-  // Pega o usuário atual
   final User? user = FirebaseAuth.instance.currentUser;
 
-  // Referência para a coleção de usuários
-  final CollectionReference usersCollection = 
-      FirebaseFirestore.instance.collection('users');
+  // Coleções
+  final CollectionReference usersCollection = FirebaseFirestore.instance.collection('users');
+  final CollectionReference postsCollection = FirebaseFirestore.instance.collection('posts');
 
-  // 1. Inicializar dados do usuário (Chamar no Login ou Home)
+  // --- 1. USUÁRIO & XP ---
+
   Future<void> initUserData() async {
     if (user == null) return;
-
     final docRef = usersCollection.doc(user!.uid);
     final snapshot = await docRef.get();
 
     if (!snapshot.exists) {
-      // Se é a primeira vez, cria o documento com 0 XP
       await docRef.set({
         'xp': 0,
-        'name': user!.displayName,
+        'name': user!.displayName ?? 'Membro',
         'email': user!.email,
+        'photoUrl': user!.photoURL,
         'last_active': DateTime.now(),
       });
       UserData.totalXP.value = 0;
     } else {
-      // Se já existe, carrega o XP salvo
       final data = snapshot.data() as Map<String, dynamic>;
       UserData.totalXP.value = data['xp'] ?? 0;
     }
   }
 
-  // 2. Salvar XP na nuvem
-  Future<void> updateUserXP(int newXP) async {
-    if (user == null) return;
-    
-    // Atualiza localmente para ser rápido
-    UserData.totalXP.value = newXP;
-
-    // Atualiza na nuvem em segundo plano
-    await usersCollection.doc(user!.uid).update({
-      'xp': newXP,
-      'last_active': DateTime.now(),
-    });
-  }
-
-  // 3. Salvar dia concluído (Para o Heatmap futuro)
   Future<void> completeDay(int xpGained) async {
     if (user == null) return;
-
     final docRef = usersCollection.doc(user!.uid);
-    
-    // Pega o XP atual e soma
     final snapshot = await docRef.get();
     int currentXP = (snapshot.data() as Map<String, dynamic>)['xp'] ?? 0;
     int finalXP = currentXP + xpGained;
 
     await docRef.update({
       'xp': finalXP,
-      // Salva um registro que o dia de hoje foi concluído para o histórico
       'activity.${DateTime.now().year}.${DateTime.now().month}.${DateTime.now().day}': true,
     });
-
-    // Atualiza a variável global visual
     UserData.totalXP.value = finalXP;
+  }
+
+  // --- 2. COMUNIDADE (POSTS) ---
+
+  // Ler posts em tempo real (ordenados por data)
+  Stream<QuerySnapshot> getPostsStream() {
+    return postsCollection.orderBy('timestamp', descending: true).snapshots();
+  }
+
+  // Criar novo post
+  Future<void> addPost(String content) async {
+    if (user == null) return;
+
+    await postsCollection.add({
+      'userId': user!.uid,
+      'userName': user!.displayName ?? 'Membro da Tribo',
+      'userPhoto': user!.photoURL, // Pode ser null
+      'content': content,
+      'timestamp': FieldValue.serverTimestamp(),
+      'likes': [], // Lista de IDs de quem curtiu
+    });
+
+    // Ganha XP por interagir!
+    completeDay(5); 
+  }
+
+  // Curtir / Descurtir
+  Future<void> toggleLike(String postId, List<dynamic> likes) async {
+    if (user == null) return;
+
+    if (likes.contains(user!.uid)) {
+      // Remove like
+      await postsCollection.doc(postId).update({
+        'likes': FieldValue.arrayRemove([user!.uid])
+      });
+    } else {
+      // Adiciona like
+      await postsCollection.doc(postId).update({
+        'likes': FieldValue.arrayUnion([user!.uid])
+      });
+    }
   }
 }
