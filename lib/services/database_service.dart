@@ -5,7 +5,7 @@ import '../user_data.dart';
 class DatabaseService {
   final User? user = FirebaseAuth.instance.currentUser;
 
-  // E-mail da administradora (sem limites de post)
+  // E-mail da administradora
   static const String adminEmail = "rafaelly@neurotribo.com"; 
 
   // Coleções
@@ -14,13 +14,15 @@ class DatabaseService {
 
   // --- 1. USUÁRIO & PERFIL ---
 
+  // Inicializa e fica "ouvindo" mudanças no XP (Real-time)
   Future<void> initUserData() async {
     if (user == null) return;
     final docRef = usersCollection.doc(user!.uid);
+    
+    // 1. Tenta pegar os dados iniciais
     final snapshot = await docRef.get();
 
     if (!snapshot.exists) {
-      // Cria usuário inicial
       await docRef.set({
         'xp': 0,
         'name': user!.displayName ?? 'Membro',
@@ -31,52 +33,68 @@ class DatabaseService {
       UserData.totalXP.value = 0;
     } else {
       final data = snapshot.data() as Map<String, dynamic>;
+      // Atualiza a tela imediatamente com o que tem no banco
       UserData.totalXP.value = data['xp'] ?? 0;
-      
-      // Sincroniza a foto se ela foi alterada dentro do app (avatar)
-      if (data['photoUrl'] != null && data['photoUrl'] != user!.photoURL) {
-        await user!.updatePhotoURL(data['photoUrl']);
-      }
     }
+
+    // 2. (Opcional mas recomendado) Cria um ouvinte para garantir sincronia
+    // Se você mudar o XP no site do Firebase, muda no app na hora.
+    docRef.snapshots().listen((snapshot) {
+      if (snapshot.exists) {
+        final data = snapshot.data() as Map<String, dynamic>;
+        UserData.totalXP.value = data['xp'] ?? 0;
+      }
+    });
   }
 
-  // Atualizar avatar (apenas salva o link da imagem escolhida)
+  // Atualizar avatar
   Future<void> updateAvatar(String url) async {
     if (user == null) return;
-    await user?.updatePhotoURL(url); // Atualiza no Auth
-    await usersCollection.doc(user!.uid).update({'photoUrl': url}); // Atualiza no Banco
+    await user?.updatePhotoURL(url);
+    await usersCollection.doc(user!.uid).update({'photoUrl': url});
   }
 
+  // --- LÓGICA DE XP CORRIGIDA (Atualização Otimista) ---
   Future<void> completeDay(int xpGained) async {
     if (user == null) return;
-    final docRef = usersCollection.doc(user!.uid);
     
-    final snapshot = await docRef.get();
-    int currentXP = 0;
-    if (snapshot.exists && snapshot.data() != null) {
-      final data = snapshot.data() as Map<String, dynamic>;
-      currentXP = data['xp'] ?? 0;
-    }
-    
-    int finalXP = currentXP + xpGained;
+    // 1. ATUALIZAÇÃO OTIMISTA (Na tela AGORA)
+    // Soma no visual antes mesmo de enviar para a internet
+    UserData.addXP(xpGained); 
 
-    await docRef.update({
-      'xp': finalXP,
-      'activity.${DateTime.now().year}.${DateTime.now().month}.${DateTime.now().day}': true,
-    });
-    UserData.totalXP.value = finalXP;
+    final docRef = usersCollection.doc(user!.uid);
+
+    try {
+      // 2. ATUALIZAÇÃO NO BANCO (Em segundo plano)
+      // Usamos FieldValue.increment para evitar erros de cálculo se a net cair
+      await docRef.set({
+        'xp': FieldValue.increment(xpGained), // Soma atômica segura
+        'last_active': DateTime.now(),
+        // Marca o dia no calendário (usando merge para não apagar o resto)
+        'activity': {
+          '${DateTime.now().year}': {
+            '${DateTime.now().month}': {
+              '${DateTime.now().day}': true
+            }
+          }
+        }
+      }, SetOptions(merge: true)); 
+    } catch (e) {
+      // Se der erro, desfaz a soma visual (opcional, mas boa prática)
+      print("Erro ao salvar XP: $e");
+      UserData.addXP(-xpGained); 
+    }
   }
 
-  // --- 2. COMUNIDADE (POSTS TEXTO) ---
+  // --- 2. COMUNIDADE ---
 
   Stream<QuerySnapshot> getPostsStream() {
     return postsCollection.orderBy('timestamp', descending: true).snapshots();
   }
 
-  // Verifica se já postou hoje
   Future<bool> hasPostedToday() async {
     if (user == null) return true; 
-    if (user!.email == adminEmail) return false; // Admin livre
+    if (user!.email == adminEmail) return false; 
 
     final now = DateTime.now();
     final startOfDay = DateTime(now.year, now.month, now.day);
@@ -89,14 +107,14 @@ class DatabaseService {
     return query.docs.isNotEmpty;
   }
 
-  // Criar novo post (Apenas texto)
   Future<void> addPost(String content) async {
     if (user == null) return;
 
     if (await hasPostedToday()) {
-      throw "Você já fez seu post diário! Volte amanhã ou comente nos posts dos outros.";
+      throw "Você já fez seu post diário! Volte amanhã.";
     }
 
+    // Salva o post
     await postsCollection.add({
       'userId': user!.uid,
       'userName': user!.displayName ?? 'Membro da Tribo',
@@ -106,7 +124,8 @@ class DatabaseService {
       'likes': [],
     });
 
-    completeDay(5); // XP por postar
+    // Soma +5 XP usando a nova função otimizada
+    completeDay(5);
   }
 
   Future<void> toggleLike(String postId, List<dynamic> likes) async {
