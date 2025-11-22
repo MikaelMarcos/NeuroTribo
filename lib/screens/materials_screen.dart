@@ -1,7 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:url_launcher/url_launcher.dart'; // Para abrir os links
 
 class MaterialsScreen extends StatelessWidget {
   const MaterialsScreen({super.key});
+
+  // Função para abrir o link
+  Future<void> _launchDownload(BuildContext context, String url) async {
+    if (url.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Link indisponível.")));
+      return;
+    }
+    
+    final Uri uri = Uri.parse(url);
+    try {
+      if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+        throw 'Não foi possível abrir $url';
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Erro ao abrir: $e")));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -12,8 +31,8 @@ class MaterialsScreen extends StatelessWidget {
         appBar: AppBar(
           backgroundColor: const Color(0xFFF5F2EA),
           elevation: 0,
+          automaticallyImplyLeading: false,
           iconTheme: const IconThemeData(color: Color(0xFF8B5A2B)),
-          automaticallyImplyLeading: false, // Remove botão de voltar pois está na tab bar
           title: const Text("Biblioteca", style: TextStyle(color: Color(0xFF4A4A4A), fontWeight: FontWeight.bold)),
           bottom: const TabBar(
             isScrollable: true,
@@ -29,108 +48,169 @@ class MaterialsScreen extends StatelessWidget {
             ],
           ),
         ),
-        body: TabBarView(
+        body: const TabBarView(
           children: [
-            _buildMaterialList([
-              {"title": "Protocolo Anti-Ansiedade", "type": "PDF", "desc": "Passo a passo para crises.", "img": "assets/images/neuroExemploDeAula1.png"},
-              {"title": "Checklist de Dopamina", "type": "PDF", "desc": "Identifique seus gatilhos.", "img": "assets/images/neuroExemploDeAula1.png"},
-            ]),
-            _buildMaterialList([
-              {"title": "Ficha de Autoavaliação", "type": "DOC", "desc": "Exercício semanal.", "img": "assets/images/neuroExemploDeAula1.png"},
-              {"title": "Treino Cognitivo", "type": "DOC", "desc": "Melhore sua memória.", "img": "assets/images/neuroExemploDeAula1.png"},
-            ]),
-            _buildMaterialList([
-              {"title": "Reprogramação Matinal", "type": "MP3", "desc": "Comece o dia focado.", "img": "assets/images/neuroExemploDeAula1.png"},
-              {"title": "Técnica Grounding", "type": "MP3", "desc": "Áudio guiado.", "img": "assets/images/neuroExemploDeAula1.png"},
-            ], isAudio: true),
-            _buildMaterialList([
-              {"title": "Construindo Rotinas", "type": "EBOOK", "desc": "Mini-livro completo.", "img": "assets/images/neuroExemploDeAula1.png"},
-              {"title": "Ambiente Produtivo", "type": "EBOOK", "desc": "Design de ambiente.", "img": "assets/images/neuroExemploDeAula1.png"},
-            ]),
-            _buildMaterialList([
-              {"title": "Planner Semanal", "type": "XLS", "desc": "Editável no Excel.", "img": "assets/images/neuroExemploDeAula1.png"},
-              {"title": "Planner Financeiro", "type": "XLS", "desc": "Controle de gastos.", "img": "assets/images/neuroExemploDeAula1.png"},
-            ]),
+            MaterialsList(category: "Guias & PDFs"),
+            MaterialsList(category: "Exercícios"),
+            MaterialsList(category: "Áudios"),
+            MaterialsList(category: "E-books"),
+            MaterialsList(category: "Templates"),
           ],
         ),
       ),
     );
   }
+}
 
-  Widget _buildMaterialList(List<Map<String, String>> items, {bool isAudio = false}) {
-    return ListView.builder(
-      padding: const EdgeInsets.all(20),
-      itemCount: items.length,
-      itemBuilder: (context, index) {
-        final item = items[index];
-        return Container(
-          margin: const EdgeInsets.only(bottom: 15),
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 5)],
-          ),
-          child: Row(
-            children: [
-              // MINIATURA
-              Container(
-                width: 70,
-                height: 70,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(8),
-                  image: DecorationImage(
-                    image: AssetImage(item['img']!), // Placeholder
-                    fit: BoxFit.cover,
-                  ),
-                ),
-                child: Center(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(4)),
-                    child: Text(item['type']!, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
-                  ),
-                ),
+// Widget separado para listar materiais de uma categoria específica
+class MaterialsList extends StatelessWidget {
+  final String category;
+
+  const MaterialsList({super.key, required this.category});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('materials')
+          .where('category', isEqualTo: category) // Filtra pela aba atual
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator(color: Color(0xFF8B5A2B)));
+        }
+
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.folder_off_outlined, size: 40, color: Colors.grey.withOpacity(0.5)),
+                const SizedBox(height: 10),
+                Text("Nenhum material em '$category'", style: const TextStyle(color: Colors.grey)),
+              ],
+            ),
+          );
+        }
+
+        final materials = snapshot.data!.docs;
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(20),
+          itemCount: materials.length,
+          itemBuilder: (context, index) {
+            final data = materials[index].data() as Map<String, dynamic>;
+            final bool isAudio = data['type'] == 'MP3' || data['type'] == 'AUDIO';
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 15),
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 5)],
               ),
-              const SizedBox(width: 15),
-              
-              // TEXTOS
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(item['title']!, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF333333))),
-                    const SizedBox(height: 4),
-                    Text(item['desc']!, style: const TextStyle(color: Colors.grey, fontSize: 12), maxLines: 2, overflow: TextOverflow.ellipsis),
-                  ],
-                ),
-              ),
-              
-              // BOTÕES DE AÇÃO
-              Column(
+              child: Row(
                 children: [
-                  IconButton(
-                    icon: const Icon(Icons.favorite_border, color: Color(0xFF8B5A2B), size: 22),
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Adicionado aos favoritos!")));
-                    }, 
-                    constraints: const BoxConstraints(),
-                    padding: const EdgeInsets.only(bottom: 8),
+                  // MINIATURA (Ícone baseado no tipo)
+                  Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF5F2EA),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Center(
+                      child: Icon(
+                        _getIconForType(data['type'] ?? 'DOC'),
+                        color: const Color(0xFF8B5A2B),
+                        size: 30,
+                      ),
+                    ),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.download_rounded, color: Colors.grey, size: 22),
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Iniciando download...")));
-                    },
-                    constraints: const BoxConstraints(),
-                    padding: EdgeInsets.zero,
+                  const SizedBox(width: 15),
+                  
+                  // TEXTOS
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          data['title'] ?? 'Sem título', 
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF333333))
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          data['description'] ?? '', 
+                          style: const TextStyle(color: Colors.grey, fontSize: 12), 
+                          maxLines: 2, 
+                          overflow: TextOverflow.ellipsis
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  // BOTÕES DE AÇÃO
+                  Column(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.favorite_border, color: Color(0xFF8B5A2B), size: 22),
+                        onPressed: () {
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Em breve: Favoritos!")));
+                        }, 
+                        constraints: const BoxConstraints(),
+                        padding: const EdgeInsets.only(bottom: 8),
+                      ),
+                      IconButton(
+                        icon: Icon(
+                          isAudio ? Icons.play_circle_outline : Icons.download_rounded, 
+                          color: Colors.grey, 
+                          size: 22
+                        ),
+                        onPressed: () {
+                          // Chama a função de abrir link
+                          // Precisamos subir a árvore de widgets para achar o método ou repetir a lógica.
+                          // Vamos repetir a lógica aqui para simplificar o contexto.
+                          _launchUrl(context, data['url'] ?? '');
+                        },
+                        constraints: const BoxConstraints(),
+                        padding: EdgeInsets.zero,
+                      )
+                    ],
                   )
                 ],
-              )
-            ],
-          ),
+              ),
+            );
+          },
         );
       },
     );
+  }
+
+  Future<void> _launchUrl(BuildContext context, String url) async {
+    if (url.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Link não configurado.")));
+      return;
+    }
+    final Uri uri = Uri.parse(url);
+    try {
+      if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+        throw 'Erro';
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Não foi possível abrir o link.")));
+    }
+  }
+
+  IconData _getIconForType(String type) {
+    switch (type.toUpperCase()) {
+      case 'PDF': return Icons.picture_as_pdf;
+      case 'AUDIO': 
+      case 'MP3': return Icons.headphones;
+      case 'XLS': 
+      case 'TEMPLATE': return Icons.table_chart;
+      case 'EBOOK': return Icons.book;
+      default: return Icons.description;
+    }
   }
 }

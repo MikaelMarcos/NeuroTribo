@@ -20,6 +20,7 @@ dependencies:
   chewie: ^1.7.1
   audioplayers: ^5.2.1 # Pacote de sons
   youtube_player_iframe: ^5.1.2
+  url_launcher: ^6.2.5
 
   # Firebase
   firebase_core: ^2.27.0
