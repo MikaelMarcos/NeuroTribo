@@ -40,7 +40,6 @@ class _HomeScreenState extends State<HomeScreen> {
   ];
 
   void _onItemTapped(int index) {
-    // Removido som de navegação para ficar mais clean
     setState(() {
       _selectedIndex = index;
     });
@@ -88,9 +87,11 @@ class _HomeContentState extends State<HomeContent> {
   
   int _currentHeroIndex = 0;
   Timer? _timer;
+  
+  // Lista inicial (será substituída pelo Firebase)
   List<Map<String, dynamic>> _heroSlides = [
     {
-      "image": "assets/images/neuroExemploDeAula1.png",
+      "videoUrl": "", // Vazio usa a imagem padrão
       "title": "NEUROPLASTICIDADE",
       "desc": "Sua mente muda com ações consistentes.",
       "week": "SEMANA 1"
@@ -119,6 +120,7 @@ class _HomeContentState extends State<HomeContent> {
     });
   }
 
+  // Função Inteligente para Capas
   ImageProvider _getThumbnailProvider(String videoUrl) {
     if (videoUrl.contains("youtube.com") || videoUrl.contains("youtu.be")) {
       String? videoId;
@@ -133,9 +135,11 @@ class _HomeContentState extends State<HomeContent> {
       }
 
       if (videoId != null) {
+        // Capa do YouTube
         return NetworkImage("https://img.youtube.com/vi/$videoId/hqdefault.jpg");
       }
     }
+    // Se for MP4 ou link inválido, usa a SUA imagem da plataforma
     return const AssetImage("assets/images/neuroExemploDeAula1.png");
   }
 
@@ -177,19 +181,28 @@ class _HomeContentState extends State<HomeContent> {
         stream: DatabaseService().getModulesStream(), 
         builder: (context, snapshotModules) {
           
+          // Atualiza os slides do Hero com dados reais do Firebase
           if (snapshotModules.hasData && snapshotModules.data!.docs.isNotEmpty) {
             List<Map<String, dynamic>> newSlides = [];
             for (var doc in snapshotModules.data!.docs) {
               var data = doc.data() as Map<String, dynamic>;
+              // Tenta pegar a primeira aula do módulo para usar a capa
+              List lessons = data['lessons'] ?? [];
+              String firstVideoUrl = lessons.isNotEmpty ? (lessons[0]['videoUrl'] ?? "") : "";
+
               newSlides.add({
-                "image": "assets/images/neuroExemploDeAula1.png", 
+                "videoUrl": firstVideoUrl, // URL para gerar a thumbnail
                 "title": (data['title'] as String).toUpperCase(),
                 "desc": "Acesse agora o conteúdo exclusivo.",
                 "week": "MÓDULO ${data['order'] ?? 1}"
               });
             }
-            if (newSlides.length != _heroSlides.length && newSlides.isNotEmpty) {
-               _heroSlides = newSlides;
+            // Atualiza se a lista mudou
+            if (newSlides.isNotEmpty && newSlides.length != _heroSlides.length) {
+               // Pequeno delay para evitar erro de build durante setState
+               WidgetsBinding.instance.addPostFrameCallback((_) {
+                 if (mounted) setState(() => _heroSlides = newSlides);
+               });
             }
           }
 
@@ -210,6 +223,7 @@ class _HomeContentState extends State<HomeContent> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // 1. BANNER DINÂMICO (FUNDO MUDA)
                     _buildDynamicHeroBanner(context),
 
                     const SizedBox(height: 20),
@@ -225,6 +239,8 @@ class _HomeContentState extends State<HomeContent> {
 
                     _buildSectionHeader("Módulos e Aulas"),
                     const SizedBox(height: 15),
+                    
+                    // Lista estática de exemplo se não houver dados
                     _buildVideoCarousel([
                       {"title": "Neuroplasticidade", "subtitle": "Aula 1", "url": "https://assets.mixkit.co/videos/preview/mixkit-waves-in-the-water-1164-large.mp4"},
                       {"title": "Dopamina Detox", "subtitle": "Aula 2", "url": "https://assets.mixkit.co/videos/preview/mixkit-tree-with-yellow-flowers-1173-large.mp4"},
@@ -248,6 +264,7 @@ class _HomeContentState extends State<HomeContent> {
       height: 500,
       child: Stack(
         children: [
+          // 1. FUNDO ANIMADO COM THUMBNAIL
           AnimatedSwitcher(
             duration: const Duration(milliseconds: 800),
             child: Container(
@@ -255,12 +272,15 @@ class _HomeContentState extends State<HomeContent> {
               decoration: BoxDecoration(
                 color: const Color(0xFF4A3B32),
                 image: DecorationImage(
-                  image: AssetImage(slide['image']), 
+                  // AQUI ESTÁ A LÓGICA: Se for YouTube pega a capa, se não pega a sua imagem
+                  image: _getThumbnailProvider(slide['videoUrl'] ?? ""), 
                   fit: BoxFit.cover,
                 ),
               ),
             ),
           ),
+          
+          // 2. GRADIENTE PARA LEITURA
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -276,6 +296,8 @@ class _HomeContentState extends State<HomeContent> {
               ),
             ),
           ),
+          
+          // 3. CONTEÚDO DE TEXTO
           Positioned(
             bottom: 20, left: 20, right: 20,
             child: Column(
@@ -394,7 +416,6 @@ class _HomeContentState extends State<HomeContent> {
   }
 
   Widget _buildVideoCarousel(List items, List completedList, {bool isHistory = false}) {
-    // Altura aumentada para evitar overflow dos textos
     return SizedBox(
       height: 280, 
       child: ListView.builder(
@@ -432,7 +453,7 @@ class _HomeContentState extends State<HomeContent> {
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(12),
                     image: DecorationImage(
-                      // Usa a capa do YouTube se for link do YouTube
+                      // APLICAÇÃO DO THUMBNAIL INTELIGENTE TAMBÉM NOS CARDS
                       image: _getThumbnailProvider(url),
                       fit: BoxFit.cover,
                     ),
@@ -549,7 +570,7 @@ class ModulesListScreen extends StatelessWidget {
   }
 }
 
-// --- TELA DE DETALHES DO VÍDEO (DESIGN PLATAFORMA DE CURSOS) ---
+// --- TELA DE DETALHES DO VÍDEO (COM ALTURA FIXA) ---
 class VideoDetailScreen extends StatefulWidget {
   final String title;
   final String videoUrl;
@@ -576,7 +597,6 @@ class _VideoDetailScreenState extends State<VideoDetailScreen> {
     super.initState();
     _initializePlayer();
     _checkStatus();
-    // Salva no histórico
     _dbService.addToHistory(widget.videoUrl, widget.title, "Continuar assistindo");
   }
 
@@ -658,116 +678,101 @@ class _VideoDetailScreenState extends State<VideoDetailScreen> {
       backgroundColor: const Color(0xFFF5F2EA),
       body: SafeArea(
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 1. PLAYER FIXO NO TOPO (16:9)
-            Stack(
-              children: [
-                AspectRatio(
-                  aspectRatio: 16 / 9,
-                  child: Container(
-                    color: Colors.black,
-                    child: Center(
-                      child: isYoutube
-                          ? (_youtubeController != null 
-                              ? YoutubePlayer(controller: _youtubeController!, aspectRatio: 16/9)
-                              : const CircularProgressIndicator(color: Color(0xFF8B5A2B)))
-                          : (_chewieController != null && _videoPlayerController != null && _videoPlayerController!.value.isInitialized 
-                              ? Chewie(controller: _chewieController!)
-                              : const CircularProgressIndicator(color: Color(0xFF8B5A2B))),
+            // PLAYER COM ALTURA FIXA E CENTRALIZADO
+            Container(
+              height: 250,
+              width: double.infinity,
+              color: Colors.black,
+              child: Stack(
+                children: [
+                  Center(
+                    child: isYoutube
+                        ? (_youtubeController != null 
+                            ? YoutubePlayer(
+                                controller: _youtubeController!,
+                                aspectRatio: 16/9,
+                              )
+                            : const CircularProgressIndicator(color: Color(0xFF8B5A2B)))
+                        : (_chewieController != null && _videoPlayerController != null && _videoPlayerController!.value.isInitialized 
+                            ? Chewie(controller: _chewieController!)
+                            : const CircularProgressIndicator(color: Color(0xFF8B5A2B))),
+                  ),
+                  // Botão de Voltar Flutuante
+                  Positioned(
+                    top: 10, left: 10,
+                    child: GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: const BoxDecoration(color: Colors.black45, shape: BoxShape.circle),
+                        child: const Icon(Icons.arrow_back, color: Colors.white, size: 20),
+                      ),
                     ),
                   ),
-                ),
-                Positioned(
-                  top: 10, left: 10,
-                  child: GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: const BoxDecoration(color: Colors.black45, shape: BoxShape.circle),
-                      child: const Icon(Icons.arrow_back, color: Colors.white, size: 20),
-                    ),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
             
-            // 2. CONTEÚDO ROLÁVEL
+            // CONTEÚDO ROLÁVEL
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Título
-                    Text(
-                      widget.title, 
-                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Color(0xFF2D2D2D), height: 1.3)
-                    ),
-                    const SizedBox(height: 24),
-                    
-                    // Botões Grandes
+                    // Título e Favorito
                     Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Botão Favorito (Outline)
                         Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: () async {
-                              SoundManager.playClick();
-                              if (isFavorite) {
-                                await _dbService.removeFromFavorites(widget.videoUrl);
-                              } else {
-                                await _dbService.addToFavorites(widget.videoUrl);
-                              }
-                              setState(() => isFavorite = !isFavorite);
-                            },
-                            icon: Icon(
-                              isFavorite ? Icons.favorite : Icons.favorite_border, 
-                              color: isFavorite ? const Color(0xFFE57373) : const Color(0xFF8B5A2B)
-                            ),
-                            label: Text(
-                              isFavorite ? "Favorito" : "Favoritar", 
-                              style: TextStyle(
-                                color: isFavorite ? const Color(0xFFE57373) : const Color(0xFF8B5A2B), 
-                                fontWeight: FontWeight.bold
-                              )
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              elevation: 2,
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(30), 
-                                side: BorderSide(color: isFavorite ? const Color(0xFFE57373).withOpacity(0.5) : const Color(0xFF8B5A2B))
-                              ),
-                            ),
+                          child: Text(
+                            widget.title, 
+                            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Color(0xFF2D2D2D), height: 1.3)
                           ),
                         ),
-                        const SizedBox(width: 15),
-                        
-                        // Botão Marcar Visto (Filled)
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: () async {
-                              SoundManager.playSuccess();
-                              bool newState = !isCompleted;
-                              setState(() => isCompleted = newState);
-                              await _dbService.toggleVideoCompletion(widget.videoUrl, newState);
-                              if (newState) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Aula concluída! +10 XP"), backgroundColor: Colors.green));
-                            },
-                            icon: Icon(isCompleted ? Icons.check_circle : Icons.check_circle_outline, color: Colors.white),
-                            label: Text(
-                              isCompleted ? "Concluído" : "Marcar Visto", 
-                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: isCompleted ? Colors.green[600] : const Color(0xFF8B5A2B),
-                              elevation: 4,
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                            ),
+                        IconButton(
+                          onPressed: () async {
+                            SoundManager.playClick();
+                            if (isFavorite) {
+                              await _dbService.removeFromFavorites(widget.videoUrl);
+                            } else {
+                              await _dbService.addToFavorites(widget.videoUrl);
+                            }
+                            setState(() => isFavorite = !isFavorite);
+                          },
+                          icon: Icon(
+                            isFavorite ? Icons.favorite : Icons.favorite_border,
+                            color: isFavorite ? const Color(0xFFE57373) : const Color(0xFF8B5A2B),
+                            size: 28,
                           ),
-                        ),
+                        )
                       ],
+                    ),
+                    
+                    const SizedBox(height: 15),
+                    
+                    // Botão Concluir Aula
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: ElevatedButton.icon(
+                        onPressed: () async {
+                          SoundManager.playSuccess();
+                          bool newState = !isCompleted;
+                          setState(() => isCompleted = newState);
+                          await _dbService.toggleVideoCompletion(widget.videoUrl, newState);
+                          if (newState) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Aula concluída! +10 XP"), backgroundColor: Colors.green));
+                        },
+                        icon: Icon(isCompleted ? Icons.check_circle : Icons.check_circle_outline, color: Colors.white),
+                        label: Text(isCompleted ? "AULA CONCLUÍDA" : "MARCAR COMO VISTO", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: isCompleted ? Colors.green[600] : const Color(0xFF8B5A2B),
+                          elevation: 2,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
                     ),
                     
                     const SizedBox(height: 30),
