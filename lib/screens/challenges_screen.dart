@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../user_data.dart';
 import '../sound_manager.dart';
+import '../services/database_service.dart'; // Importe o serviço
 
 // --- TELA DE LISTA DE DESAFIOS ---
 class ChallengesScreen extends StatelessWidget {
@@ -261,21 +262,22 @@ class _ChallengeDetailScreenState extends State<ChallengeDetailScreen> {
               width: double.infinity,
               height: 50,
               child: ElevatedButton(
-                onPressed: () {
+                onPressed: () async {
                   // 1. Toca o som
                   SoundManager.playSuccess(); 
                   
-                  // 2. Adiciona o XP (soma ao total global)
-                  UserData.addXP(xpToCollect);
+                  // 2. Salva no Firebase e Atualiza XP local
+                  await DatabaseService().completeDay(xpToCollect);
 
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text("Dia concluído! Você ganhou +$xpToCollect XP!"), 
-                      backgroundColor: Colors.green
-                    )
-                  );
-                  
-                  Navigator.pop(context);
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text("Dia salvo! +$xpToCollect XP garantidos na nuvem!"), 
+                        backgroundColor: Colors.green
+                      )
+                    );
+                    Navigator.pop(context);
+                  }
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF8B5A2B),
