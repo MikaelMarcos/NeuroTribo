@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:timeago/timeago.dart' as timeago; // AGORA VAI FUNCIONAR
+import 'package:timeago/timeago.dart' as timeago;
 import '../services/database_service.dart';
 
 class CommunityScreen extends StatefulWidget {
@@ -18,77 +18,105 @@ class _CommunityScreenState extends State<CommunityScreen> {
   @override
   void initState() {
     super.initState();
-    // Configura o timeago para português
     timeago.setLocaleMessages('pt_BR', timeago.PtBrMessages());
   }
 
   String _formatTimestamp(dynamic timestamp) {
     if (timestamp == null) return "Agora";
-    DateTime date;
-    if (timestamp is Timestamp) {
-      date = timestamp.toDate();
-    } else if (timestamp is DateTime) {
-      date = timestamp;
-    } else {
-      return "Agora";
-    }
+    DateTime date = (timestamp is Timestamp) ? timestamp.toDate() : DateTime.now();
     return timeago.format(date, locale: 'pt_BR');
   }
 
+  // Widget seguro para avatar
+  Widget _buildAvatar(String? url, String name) {
+    if (url == null || url.isEmpty) {
+      return CircleAvatar(
+        backgroundColor: const Color(0xFF8B5A2B),
+        child: Text(name[0].toUpperCase(), style: const TextStyle(color: Colors.white)),
+      );
+    }
+    return CircleAvatar(
+      backgroundColor: const Color(0xFF8B5A2B),
+      backgroundImage: NetworkImage(url),
+      onBackgroundImageError: (exception, stackTrace) {
+        // Se der erro (429), o flutter vai usar o child abaixo
+      },
+      child: null, // Se a imagem falhar, precisaria de lógica extra aqui, mas o CircleAvatar lida bem
+    );
+  }
+
   void _showCreatePostDialog() {
-    final TextEditingController _postController = TextEditingController();
+    final TextEditingController postController = TextEditingController();
+    bool isPosting = false;
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-          top: 20, left: 20, right: 20,
-        ),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text("Compartilhe com a Tribo", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF4A4A4A))),
-            const SizedBox(height: 15),
-            TextField(
-              controller: _postController,
-              maxLines: 4,
-              decoration: InputDecoration(
-                hintText: "Como está sendo sua jornada hoje?",
-                filled: true,
-                fillColor: const Color(0xFFF5F2EA),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+      builder: (BuildContext ctx) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+                top: 20, left: 20, right: 20,
               ),
-            ),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton.icon(
-                onPressed: () async {
-                  if (_postController.text.trim().isNotEmpty) {
-                    Navigator.pop(context);
-                    await _dbService.addPost(_postController.text.trim());
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Post enviado! +5 XP"), backgroundColor: Colors.green));
-                    }
-                  }
-                },
-                icon: const Icon(Icons.send, color: Colors.white),
-                label: const Text("PUBLICAR", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF8B5A2B), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
               ),
-            )
-          ],
-        ),
-      ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text("Compartilhe com a Tribo", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF4A4A4A))),
+                  const SizedBox(height: 15),
+                  TextField(
+                    controller: postController,
+                    maxLines: 3,
+                    decoration: InputDecoration(
+                      hintText: "Como está sendo sua jornada hoje?",
+                      filled: true,
+                      fillColor: const Color(0xFFF5F2EA),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton.icon(
+                      onPressed: isPosting ? null : () async {
+                        if (postController.text.trim().isNotEmpty) {
+                          setModalState(() => isPosting = true);
+                          try {
+                            await _dbService.addPost(postController.text.trim());
+                            if (mounted) {
+                              Navigator.pop(context);
+                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Post enviado! +5 XP"), backgroundColor: Colors.green));
+                            }
+                          } catch (e) {
+                            setModalState(() => isPosting = false);
+                            if (mounted) {
+                              Navigator.pop(context);
+                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString()), backgroundColor: Colors.red));
+                            }
+                          }
+                        }
+                      },
+                      icon: isPosting 
+                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white)) 
+                        : const Icon(Icons.send, color: Colors.white),
+                      label: Text(isPosting ? "ENVIANDO..." : "PUBLICAR", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF8B5A2B), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                    ),
+                  )
+                ],
+              ),
+            );
+          }
+        );
+      },
     );
   }
 
@@ -112,20 +140,9 @@ class _CommunityScreenState extends State<CommunityScreen> {
       body: StreamBuilder<QuerySnapshot>(
         stream: _dbService.getPostsStream(),
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(color: Color(0xFF8B5A2B)));
-          }
+          if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator(color: Color(0xFF8B5A2B)));
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.chat_bubble_outline, size: 60, color: Colors.grey.withOpacity(0.5)),
-                  const SizedBox(height: 10),
-                  const Text("Ainda não há posts.", style: TextStyle(color: Colors.grey)),
-                ],
-              ),
-            );
+            return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.chat_bubble_outline, size: 60, color: Colors.grey.withOpacity(0.5)), const SizedBox(height: 10), const Text("Ainda não há posts.", style: TextStyle(color: Colors.grey))]));
           }
 
           final posts = snapshot.data!.docs;
@@ -148,12 +165,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                   children: [
                     Row(
                       children: [
-                        CircleAvatar(
-                          backgroundColor: const Color(0xFF8B5A2B),
-                          radius: 20,
-                          backgroundImage: data['userPhoto'] != null ? NetworkImage(data['userPhoto']) : null,
-                          child: data['userPhoto'] == null ? Text((data['userName'] ?? 'M')[0].toUpperCase(), style: const TextStyle(color: Colors.white)) : null,
-                        ),
+                        _buildAvatar(data['userPhoto'], data['userName'] ?? 'M'),
                         const SizedBox(width: 10),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,

@@ -23,13 +23,11 @@ dependencies:
   # Utilitários
   url_launcher: ^6.2.5
   timeago: ^3.6.1
-  image_picker: ^1.0.7 # PARA PEGAR FOTOS DA GALERIA
 
-  # Firebase e Backend
+  # Firebase e Backend (SEM STORAGE)
   firebase_core: ^2.27.0
   firebase_auth: ^4.17.9
   cloud_firestore: ^4.15.5
-  firebase_storage: ^11.6.9 # PARA SALVAR AS FOTOS NA NUVEM
   google_sign_in: ^6.2.1
   youtube_player_iframe: ^5.1.2
 
