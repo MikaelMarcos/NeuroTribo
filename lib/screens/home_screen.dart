@@ -8,6 +8,7 @@ import 'materials_screen.dart';
 import 'challenges_screen.dart';
 import 'community_screen.dart';
 import 'profile_screen.dart';
+import '../sound_manager.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -23,13 +24,14 @@ class _HomeScreenState extends State<HomeScreen> {
   // Lista das telas para a navegação do rodapé
   final List<Widget> _screens = [
     const HomeContent(),      // 0: Início
-    const MaterialsScreen(),  // 1: Materiais (Novo)
+    const MaterialsScreen(),  // 1: Materiais
     const ChallengesScreen(), // 2: Desafios
-    const CommunityScreen(),  // 3: Tribo (Novo)
+    const CommunityScreen(),  // 3: Tribo
     const ProfileScreen(),    // 4: Perfil
   ];
 
   void _onItemTapped(int index) {
+    SoundManager.playClick(); // Som de navegação
     setState(() {
       _selectedIndex = index;
     });
@@ -40,9 +42,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F2EA),
       // Exibe a tela correspondente ao índice selecionado
-      body: _selectedIndex == 0 
-          ? const HomeContent() // Se for Home, usa o layout complexo com AppBar
-          : _screens[_selectedIndex], // Se for outra, carrega a tela direta
+      body: _screens[_selectedIndex],
       
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
@@ -69,7 +69,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-// Separei o conteúdo da Home para organizar o código
+// Conteúdo da Home (Separado para organização)
 class HomeContent extends StatelessWidget {
   const HomeContent({super.key});
 
@@ -118,7 +118,6 @@ class HomeContent extends StatelessWidget {
             const SizedBox(height: 20),
             _buildProgressSection(),
             const SizedBox(height: 25),
-            // _buildQuickShortcuts removido pois agora estão no rodapé
             _buildSectionHeader("Últimos Lançamentos"),
             const SizedBox(height: 15),
             _buildVideoCarousel(), 
@@ -129,8 +128,6 @@ class HomeContent extends StatelessWidget {
     );
   }
 
-  // --- WIDGETS AUXILIARES DA HOME ---
-  
   Widget _buildHeroBanner(BuildContext context) {
     return SizedBox(
       height: 500,
@@ -161,7 +158,7 @@ class HomeContent extends StatelessWidget {
                 const Text("Sua mente muda com ações consistentes.", style: TextStyle(color: Colors.grey)),
                 const SizedBox(height: 20),
                 ElevatedButton.icon(
-                  onPressed: () {}, // Pode levar para Aulas
+                  onPressed: () {},
                   icon: const Icon(Icons.play_arrow, color: Colors.white),
                   label: const Text("Continuar", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                   style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF8B5A2B)),
@@ -239,241 +236,6 @@ class HomeContent extends StatelessWidget {
           const SizedBox(height: 8),
           Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold)),
           Text(subtitle, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-        ],
-      ),
-    );
-  }
-}
-
-// --- TELA DE LISTA DE MÓDULOS ---
-class ModulesListScreen extends StatelessWidget {
-  const ModulesListScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F2EA),
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Color(0xFF8B5A2B)),
-        title: const Text("Módulos e Aulas", style: TextStyle(color: Color(0xFF4A4A4A), fontWeight: FontWeight.bold)),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          _buildModuleTile(context, "Módulo 1: Neuroplasticidade", [
-            {"title": "O que é Neuroplasticidade", "duration": "10 min"},
-            {"title": "Como aplicar no dia a dia", "duration": "15 min"},
-            {"title": "Exercícios Práticos", "duration": "8 min"},
-          ], isOpen: true),
-          
-          _buildModuleTile(context, "Módulo 2: Dopamina e Autocontrole", [
-             {"title": "O ciclo da Dopamina", "duration": "12 min"},
-             {"title": "Jejum de Dopamina", "duration": "20 min"},
-          ]),
-          
-          _buildModuleTile(context, "Módulo 3: Ambiente e Produtividade", []),
-          _buildModuleTile(context, "Módulo 4: Rotina e Sono", []),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildModuleTile(BuildContext context, String title, List<Map<String, String>> videos, {bool isOpen = false}) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 15),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 5)],
-      ),
-      child: Theme(
-        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-        child: ExpansionTile(
-          initiallyExpanded: isOpen,
-          tilePadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-          title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF4A4A4A))),
-          iconColor: const Color(0xFF8B5A2B),
-          collapsedIconColor: Colors.grey,
-          children: videos.map((video) => ListTile(
-            contentPadding: const EdgeInsets.only(left: 20, right: 20, bottom: 10),
-            leading: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(color: const Color(0xFFF5F2EA), borderRadius: BorderRadius.circular(8)),
-              child: const Icon(Icons.play_arrow, color: Color(0xFF8B5A2B), size: 20),
-            ),
-            title: Text(video['title']!, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-            subtitle: Text(video['duration']!, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-            trailing: const Icon(Icons.check_circle_outline, color: Colors.grey, size: 20),
-            onTap: () {
-              Navigator.push(context, MaterialPageRoute(builder: (context) => VideoDetailScreen(
-                title: video['title']!, 
-                videoUrl: "https://flutter.github.io/assets-for-api-docs/assets/videos/butterfly.mp4")
-              ));
-            },
-          )).toList(),
-        ),
-      ),
-    );
-  }
-}
-
-// --- TELA DE DETALHES DO VÍDEO ---
-class VideoDetailScreen extends StatefulWidget {
-  final String title;
-  final String videoUrl;
-
-  const VideoDetailScreen({super.key, required this.title, required this.videoUrl});
-
-  @override
-  State<VideoDetailScreen> createState() => _VideoDetailScreenState();
-}
-
-class _VideoDetailScreenState extends State<VideoDetailScreen> {
-  late VideoPlayerController _videoPlayerController;
-  ChewieController? _chewieController;
-  bool isDone = false;
-
-  @override
-  void initState() {
-    super.initState();
-    initializePlayer();
-  }
-
-  Future<void> initializePlayer() async {
-    _videoPlayerController = VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl));
-    await _videoPlayerController.initialize();
-
-    _chewieController = ChewieController(
-      videoPlayerController: _videoPlayerController,
-      autoPlay: true,
-      looping: false,
-      aspectRatio: 16 / 9,
-      materialProgressColors: ChewieProgressColors(
-        playedColor: const Color(0xFF8B5A2B),
-        handleColor: const Color(0xFF8B5A2B),
-        backgroundColor: Colors.grey,
-        bufferedColor: Colors.white30,
-      ),
-    );
-    setState(() {});
-  }
-
-  @override
-  void dispose() {
-    _videoPlayerController.dispose();
-    _chewieController?.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F2EA),
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              height: 250,
-              color: Colors.black,
-              child: Stack(
-                children: [
-                  Center(
-                    child: _chewieController != null && _videoPlayerController.value.isInitialized
-                        ? Chewie(controller: _chewieController!)
-                        : const CircularProgressIndicator(color: Color(0xFF8B5A2B)),
-                  ),
-                  Positioned(
-                    top: 10, left: 10,
-                    child: IconButton(
-                      icon: const Icon(Icons.arrow_back, color: Colors.white),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  )
-                ],
-              ),
-            ),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(widget.title, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF4A4A4A))),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: () {
-                               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Baixando material...")));
-                            },
-                            icon: const Icon(Icons.download_rounded, size: 18),
-                            label: const Text("Baixar Material"),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              foregroundColor: const Color(0xFF8B5A2B),
-                              elevation: 0,
-                              side: const BorderSide(color: Color(0xFF8B5A2B)),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: () {
-                              setState(() => isDone = !isDone);
-                            },
-                            icon: Icon(isDone ? Icons.check_circle : Icons.check_circle_outline, size: 18),
-                            label: Text(isDone ? "Concluído" : "Marcar Visto"),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: isDone ? Colors.green : const Color(0xFF8B5A2B),
-                              foregroundColor: Colors.white,
-                              elevation: 0,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 25),
-                    const Divider(),
-                    const SizedBox(height: 15),
-                    const Text("SOBRE ESTA AULA", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.grey)),
-                    const SizedBox(height: 10),
-                    const Text(
-                      "Nesta aula, vamos entender os fundamentos biológicos de como o cérebro se adapta a novos estímulos.",
-                      style: TextStyle(color: Color(0xFF4A4A4A), height: 1.5),
-                    ),
-                    const SizedBox(height: 20),
-                    const Text("PONTOS CHAVE", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.grey)),
-                    const SizedBox(height: 10),
-                    _buildBulletPoint("O que define a neuroplasticidade."),
-                    _buildBulletPoint("Diferença entre plasticidade funcional e estrutural."),
-                    _buildBulletPoint("Exercícios práticos de atenção plena."),
-                  ],
-                ),
-              ),
-            )
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBulletPoint(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Padding(
-            padding: EdgeInsets.only(top: 6.0),
-            child: Icon(Icons.circle, size: 6, color: Color(0xFF8B5A2B)),
-          ),
-          const SizedBox(width: 10),
-          Expanded(child: Text(text, style: const TextStyle(color: Color(0xFF4A4A4A)))),
         ],
       ),
     );

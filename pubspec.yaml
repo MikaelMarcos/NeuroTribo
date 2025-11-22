@@ -13,16 +13,17 @@ dependencies:
   # UI e Ícones
   cupertino_icons: ^1.0.2
   google_fonts: ^6.1.0
-  font_awesome_flutter: ^10.6.0 # Ícones do Google/Facebook
+  font_awesome_flutter: ^10.6.0
 
-  # Vídeo
+  # Vídeo e Áudio (NOVO)
   video_player: ^2.8.1
   chewie: ^1.7.1
+  audioplayers: ^5.2.1 # Pacote de sons
 
-  # Firebase e Autenticação
+  # Firebase
   firebase_core: ^2.27.0
   firebase_auth: ^4.17.9
-  google_sign_in: ^6.2.1 # Versão estável para Web/Android
+  google_sign_in: ^6.2.1
 
 dev_dependencies:
   flutter_test:
@@ -31,5 +32,8 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  
+  # Registrar pastas de arquivos
   assets:
     - assets/images/
+    - assets/audio/ # Pasta nova de sons

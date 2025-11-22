@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import '../user_data.dart'; // Importa nosso gerenciador de XP
+import '../user_data.dart';
+import '../sound_manager.dart';
 
 // --- TELA DE LISTA DE DESAFIOS ---
 class ChallengesScreen extends StatelessWidget {
@@ -13,17 +14,25 @@ class ChallengesScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
+        automaticallyImplyLeading: false,
         iconTheme: const IconThemeData(color: Color(0xFF8B5A2B)),
         title: const Text("Desafios", style: TextStyle(color: Color(0xFF4A4A4A), fontWeight: FontWeight.bold)),
-        // Mostra o XP atual no topo
         actions: [
+          // MOSTRA O XP TOTAL NO TOPO DA TELA
           ValueListenableBuilder(
             valueListenable: UserData.totalXP, 
             builder: (context, value, child) {
               return Center(
                 child: Padding(
                   padding: const EdgeInsets.only(right: 20.0),
-                  child: Text("$value XP", style: const TextStyle(color: Color(0xFF8B5A2B), fontWeight: FontWeight.w900)),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF8B5A2B).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12)
+                    ),
+                    child: Text("$value XP", style: const TextStyle(color: Color(0xFF8B5A2B), fontWeight: FontWeight.w900)),
+                  ),
                 ),
               );
             }
@@ -36,6 +45,7 @@ class ChallengesScreen extends StatelessWidget {
           // CARD DE DESTAQUE
           GestureDetector(
             onTap: () {
+              SoundManager.playClick();
               Navigator.push(context, MaterialPageRoute(
                 builder: (context) => const ChallengeDetailScreen(title: "7 Dias de Foco Extremo")
               ));
@@ -95,6 +105,7 @@ class ChallengesScreen extends StatelessWidget {
   Widget _buildChallengeCard(BuildContext context, String title, String subtitle, int days, bool locked) {
     return GestureDetector(
       onTap: locked ? null : () {
+        SoundManager.playClick();
         Navigator.push(context, MaterialPageRoute(
           builder: (context) => ChallengeDetailScreen(title: title)
         ));
@@ -150,7 +161,7 @@ class _ChallengeDetailScreenState extends State<ChallengeDetailScreen> {
     {"title": "Dormir antes das 23h", "done": false},
   ];
 
-  // Calcula o XP a ser ganho hoje
+  // Calcula quantos checks foram marcados
   int get xpToCollect => dailyTasks.where((t) => t['done']).length;
 
   @override
@@ -230,6 +241,11 @@ class _ChallengeDetailScreenState extends State<ChallengeDetailScreen> {
                     )
                   ),
                   onChanged: (bool? value) {
+                    if (value == true) {
+                      SoundManager.playCheck(); // SOM DE CHECK!
+                    } else {
+                      SoundManager.playClick(); // Som suave ao desmarcar
+                    }
                     setState(() {
                       task['done'] = value!;
                     });
@@ -240,16 +256,18 @@ class _ChallengeDetailScreenState extends State<ChallengeDetailScreen> {
 
             const SizedBox(height: 20),
             
-            // BOTÃO CONCLUIR DIA (COM SOMA DE XP)
+            // BOTÃO CONCLUIR DIA (COM SOMA DE XP E SOM DE VITÓRIA)
             SizedBox(
               width: double.infinity,
               height: 50,
               child: ElevatedButton(
                 onPressed: () {
-                  // 1. Adiciona o XP
+                  // 1. Toca o som
+                  SoundManager.playSuccess(); 
+                  
+                  // 2. Adiciona o XP (soma ao total global)
                   UserData.addXP(xpToCollect);
 
-                  // 2. Feedback visual
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text("Dia concluído! Você ganhou +$xpToCollect XP!"), 

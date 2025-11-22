@@ -6,16 +6,17 @@ class MaterialsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 5, // Número de categorias
+      length: 5,
       child: Scaffold(
         backgroundColor: const Color(0xFFF5F2EA),
         appBar: AppBar(
           backgroundColor: const Color(0xFFF5F2EA),
           elevation: 0,
           iconTheme: const IconThemeData(color: Color(0xFF8B5A2B)),
+          automaticallyImplyLeading: false, // Remove botão de voltar pois está na tab bar
           title: const Text("Biblioteca", style: TextStyle(color: Color(0xFF4A4A4A), fontWeight: FontWeight.bold)),
           bottom: const TabBar(
-            isScrollable: true, // Permite rolar as abas se forem muitas
+            isScrollable: true,
             labelColor: Color(0xFF8B5A2B),
             unselectedLabelColor: Colors.grey,
             indicatorColor: Color(0xFF8B5A2B),
@@ -30,27 +31,22 @@ class MaterialsScreen extends StatelessWidget {
         ),
         body: TabBarView(
           children: [
-            // ABA 1: Guias e PDFs
             _buildMaterialList([
               {"title": "Protocolo Anti-Ansiedade", "type": "PDF", "desc": "Passo a passo para crises.", "img": "assets/images/neuroExemploDeAula1.png"},
               {"title": "Checklist de Dopamina", "type": "PDF", "desc": "Identifique seus gatilhos.", "img": "assets/images/neuroExemploDeAula1.png"},
             ]),
-            // ABA 2: Exercícios
             _buildMaterialList([
               {"title": "Ficha de Autoavaliação", "type": "DOC", "desc": "Exercício semanal.", "img": "assets/images/neuroExemploDeAula1.png"},
               {"title": "Treino Cognitivo", "type": "DOC", "desc": "Melhore sua memória.", "img": "assets/images/neuroExemploDeAula1.png"},
             ]),
-            // ABA 3: Áudios
             _buildMaterialList([
               {"title": "Reprogramação Matinal", "type": "MP3", "desc": "Comece o dia focado.", "img": "assets/images/neuroExemploDeAula1.png"},
               {"title": "Técnica Grounding", "type": "MP3", "desc": "Áudio guiado.", "img": "assets/images/neuroExemploDeAula1.png"},
             ], isAudio: true),
-            // ABA 4: E-books
             _buildMaterialList([
               {"title": "Construindo Rotinas", "type": "EBOOK", "desc": "Mini-livro completo.", "img": "assets/images/neuroExemploDeAula1.png"},
               {"title": "Ambiente Produtivo", "type": "EBOOK", "desc": "Design de ambiente.", "img": "assets/images/neuroExemploDeAula1.png"},
             ]),
-            // ABA 5: Templates
             _buildMaterialList([
               {"title": "Planner Semanal", "type": "XLS", "desc": "Editável no Excel.", "img": "assets/images/neuroExemploDeAula1.png"},
               {"title": "Planner Financeiro", "type": "XLS", "desc": "Controle de gastos.", "img": "assets/images/neuroExemploDeAula1.png"},
@@ -79,18 +75,18 @@ class MaterialsScreen extends StatelessWidget {
             children: [
               // MINIATURA
               Container(
-                width: 60,
-                height: 60,
+                width: 70,
+                height: 70,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(8),
                   image: DecorationImage(
-                    image: AssetImage(item['img']!), // Usando a imagem placeholder por enquanto
+                    image: AssetImage(item['img']!), // Placeholder
                     fit: BoxFit.cover,
                   ),
                 ),
                 child: Center(
                   child: Container(
-                    padding: const EdgeInsets.all(4),
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(4)),
                     child: Text(item['type']!, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
                   ),
@@ -105,7 +101,7 @@ class MaterialsScreen extends StatelessWidget {
                   children: [
                     Text(item['title']!, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF333333))),
                     const SizedBox(height: 4),
-                    Text(item['desc']!, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                    Text(item['desc']!, style: const TextStyle(color: Colors.grey, fontSize: 12), maxLines: 2, overflow: TextOverflow.ellipsis),
                   ],
                 ),
               ),
@@ -114,15 +110,18 @@ class MaterialsScreen extends StatelessWidget {
               Column(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.favorite_border, color: Color(0xFF8B5A2B), size: 20),
-                    onPressed: () {}, 
+                    icon: const Icon(Icons.favorite_border, color: Color(0xFF8B5A2B), size: 22),
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Adicionado aos favoritos!")));
+                    }, 
                     constraints: const BoxConstraints(),
-                    padding: EdgeInsets.zero,
+                    padding: const EdgeInsets.only(bottom: 8),
                   ),
-                  const SizedBox(height: 10),
                   IconButton(
-                    icon: const Icon(Icons.download_rounded, color: Colors.grey, size: 20),
-                    onPressed: () {},
+                    icon: const Icon(Icons.download_rounded, color: Colors.grey, size: 22),
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Iniciando download...")));
+                    },
                     constraints: const BoxConstraints(),
                     padding: EdgeInsets.zero,
                   )
