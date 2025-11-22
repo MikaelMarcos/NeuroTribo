@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:url_launcher/url_launcher.dart'; // Para abrir os links
+import 'package:url_launcher/url_launcher.dart'; 
+import '../sound_manager.dart'; // Importe os sons
 
 class MaterialsScreen extends StatelessWidget {
   const MaterialsScreen({super.key});
 
-  // Função para abrir o link
   Future<void> _launchDownload(BuildContext context, String url) async {
     if (url.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Link indisponível.")));
@@ -62,7 +62,6 @@ class MaterialsScreen extends StatelessWidget {
   }
 }
 
-// Widget separado para listar materiais de uma categoria específica
 class MaterialsList extends StatelessWidget {
   final String category;
 
@@ -73,7 +72,7 @@ class MaterialsList extends StatelessWidget {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('materials')
-          .where('category', isEqualTo: category) // Filtra pela aba atual
+          .where('category', isEqualTo: category) 
           .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
@@ -112,7 +111,6 @@ class MaterialsList extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  // MINIATURA (Ícone baseado no tipo)
                   Container(
                     width: 60,
                     height: 60,
@@ -130,7 +128,6 @@ class MaterialsList extends StatelessWidget {
                   ),
                   const SizedBox(width: 15),
                   
-                  // TEXTOS
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -150,12 +147,12 @@ class MaterialsList extends StatelessWidget {
                     ),
                   ),
                   
-                  // BOTÕES DE AÇÃO
                   Column(
                     children: [
                       IconButton(
                         icon: const Icon(Icons.favorite_border, color: Color(0xFF8B5A2B), size: 22),
                         onPressed: () {
+                          SoundManager.playClick(); // Som ao favoritar
                           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Em breve: Favoritos!")));
                         }, 
                         constraints: const BoxConstraints(),
@@ -168,9 +165,10 @@ class MaterialsList extends StatelessWidget {
                           size: 22
                         ),
                         onPressed: () {
-                          // Chama a função de abrir link
-                          // Precisamos subir a árvore de widgets para achar o método ou repetir a lógica.
-                          // Vamos repetir a lógica aqui para simplificar o contexto.
+                          // SOM NO DOWNLOAD:
+                          SoundManager.playClick(); 
+                          
+                          // Lógica para abrir o link
                           _launchUrl(context, data['url'] ?? '');
                         },
                         constraints: const BoxConstraints(),

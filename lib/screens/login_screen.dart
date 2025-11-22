@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_sign_in/google_sign_in.dart'; // O erro dizia que isso falhou. Agora vai funcionar.
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'home_screen.dart';
 import 'register_screen.dart';
@@ -20,7 +20,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
-  // --- Login com Email/Senha ---
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
@@ -31,7 +30,6 @@ class _LoginScreenState extends State<LoginScreen> {
         password: _passwordController.text.trim(),
       );
 
-      // VERIFICAÇÃO DE E-MAIL
       final user = credential.user;
       if (user != null && !user.emailVerified) {
         await FirebaseAuth.instance.signOut();
@@ -47,36 +45,27 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // --- Login com Google ---
   Future<void> _loginWithGoogle() async {
     setState(() => _isLoading = true);
     try {
-      // 1. Inicia o fluxo do Google
       final GoogleSignIn googleSignIn = GoogleSignIn();
       final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
       
       if (googleUser == null) {
-        // Usuário cancelou o login
         setState(() => _isLoading = false);
         return;
       }
 
-      // 2. Obtém os detalhes de autenticação da solicitação
       final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-
-      // 3. Cria uma nova credencial
       final credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
 
-      // 4. Faz login no Firebase com a credencial
       await FirebaseAuth.instance.signInWithCredential(credential);
-      
       _goToHome();
 
     } catch (e) {
-      print("Erro Google: $e"); // Para ajudar a debugar no console
       _showError('Erro ao entrar com Google.');
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -114,11 +103,9 @@ class _LoginScreenState extends State<LoginScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Logo
                 Image.asset('assets/images/logo_neurotribo.png', height: 70, fit: BoxFit.contain),
                 const SizedBox(height: 15),
 
-                // Card
                 Container(
                   padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
                   decoration: BoxDecoration(
@@ -134,15 +121,16 @@ class _LoginScreenState extends State<LoginScreen> {
                         const Text('Bem-vindo(a)', textAlign: TextAlign.center, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF4A4A4A))),
                         const SizedBox(height: 20),
 
-                        // Email
+                        // EMAIL
                         TextFormField(
                           controller: _emailController,
                           decoration: _inputDecoration('E-mail', Icons.email_outlined),
                           validator: (v) => !v!.contains('@') ? 'Email inválido' : null,
+                          textInputAction: TextInputAction.next, // Vai para a senha
                         ),
                         const SizedBox(height: 12),
 
-                        // Senha
+                        // SENHA
                         TextFormField(
                           controller: _passwordController,
                           obscureText: _obscurePassword,
@@ -153,11 +141,16 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           ),
                           validator: (v) => v!.isEmpty ? 'Digite a senha' : null,
+                          // CONFIGURAÇÃO DO ENTER:
+                          textInputAction: TextInputAction.done,
+                          onFieldSubmitted: (value) {
+                            _login(); // Chama o login ao dar Enter
+                          },
                         ),
 
                         const SizedBox(height: 20),
 
-                        // Botão Entrar
+                        // BOTÃO ENTRAR
                         SizedBox(
                           height: 42,
                           child: ElevatedButton(
@@ -171,7 +164,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
                         const SizedBox(height: 15),
 
-                        // Botão Criar Conta
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -189,7 +181,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         const Divider(),
                         const SizedBox(height: 15),
 
-                        // Botão Google
                         SizedBox(
                           height: 42,
                           child: OutlinedButton.icon(

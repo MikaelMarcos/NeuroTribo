@@ -11,6 +11,7 @@ import 'challenges_screen.dart';
 import 'community_screen.dart';
 import 'profile_screen.dart';
 import '../sound_manager.dart';
+import '../services/database_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -23,16 +24,22 @@ class _HomeScreenState extends State<HomeScreen> {
   final User? user = FirebaseAuth.instance.currentUser;
   int _selectedIndex = 0;
 
+  @override
+  void initState() {
+    super.initState();
+    DatabaseService().initUserData();
+  }
+
   final List<Widget> _screens = [
-    const HomeContent(),
-    const MaterialsScreen(),
-    const ChallengesScreen(),
-    const CommunityScreen(),
-    const ProfileScreen(),
+    const HomeContent(),      
+    const MaterialsScreen(),  
+    const ChallengesScreen(), 
+    const CommunityScreen(),  
+    const ProfileScreen(),    
   ];
 
   void _onItemTapped(int index) {
-    SoundManager.playClick();
+    // REMOVIDO: SoundManager.playClick(); -> Agora a navegação é silenciosa
     setState(() {
       _selectedIndex = index;
     });
@@ -118,7 +125,7 @@ class HomeContent extends StatelessWidget {
             const SizedBox(height: 25),
             _buildSectionHeader("Últimos Lançamentos"),
             const SizedBox(height: 15),
-            _buildVideoCarousel(context),
+            _buildVideoCarousel(context), // CORREÇÃO: Adicionado context
             const SizedBox(height: 30),
           ],
         ),
@@ -158,7 +165,7 @@ class HomeContent extends StatelessWidget {
                 ElevatedButton.icon(
                   onPressed: () {
                     Navigator.push(context, MaterialPageRoute(builder: (context) => const ModulesListScreen()));
-                  }, 
+                  },
                   icon: const Icon(Icons.play_arrow, color: Colors.white),
                   label: const Text("Continuar", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                   style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF8B5A2B)),
@@ -179,7 +186,7 @@ class HomeContent extends StatelessWidget {
         decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
         child: Row(
           children: [
-            const CircularProgressIndicator(value: 0.4, color: Color(0xFF8B5A2B), backgroundColor: Color(0xFFEEEEEE)),
+            const CircularProgressIndicator(value: 0.4, color: const Color(0xFF8B5A2B), backgroundColor: const Color(0xFFEEEEEE)),
             const SizedBox(width: 15),
             const Expanded(
               child: Column(

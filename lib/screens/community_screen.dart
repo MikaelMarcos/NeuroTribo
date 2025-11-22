@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import '../services/database_service.dart';
+import '../sound_manager.dart'; // Importe os sons
 
 class CommunityScreen extends StatefulWidget {
   const CommunityScreen({super.key});
@@ -27,7 +28,6 @@ class _CommunityScreenState extends State<CommunityScreen> {
     return timeago.format(date, locale: 'pt_BR');
   }
 
-  // Widget seguro para avatar
   Widget _buildAvatar(String? url, String name) {
     if (url == null || url.isEmpty) {
       return CircleAvatar(
@@ -38,10 +38,8 @@ class _CommunityScreenState extends State<CommunityScreen> {
     return CircleAvatar(
       backgroundColor: const Color(0xFF8B5A2B),
       backgroundImage: NetworkImage(url),
-      onBackgroundImageError: (exception, stackTrace) {
-        // Se der erro (429), o flutter vai usar o child abaixo
-      },
-      child: null, // Se a imagem falhar, precisaria de lógica extra aqui, mas o CircleAvatar lida bem
+      onBackgroundImageError: (exception, stackTrace) {},
+      child: null,
     );
   }
 
@@ -180,12 +178,26 @@ class _CommunityScreenState extends State<CommunityScreen> {
                     Text(data['content'] ?? '', style: const TextStyle(color: Color(0xFF333333), height: 1.4, fontSize: 14)),
                     const SizedBox(height: 15),
                     const Divider(height: 1),
+                    
+                    // BOTÕES DE AÇÃO
                     Row(
                       children: [
                         TextButton.icon(
-                          onPressed: () => _dbService.toggleLike(post.id, likes),
-                          icon: Icon(isLiked ? Icons.favorite : Icons.favorite_border, color: isLiked ? Colors.red : Colors.grey, size: 20),
-                          label: Text("${likes.length}", style: TextStyle(color: isLiked ? Colors.red : Colors.grey, fontSize: 12)),
+                          onPressed: () {
+                            // SOM E AÇÃO DE LIKE
+                            SoundManager.playClick(); 
+                            _dbService.toggleLike(post.id, likes);
+                          },
+                          // ÍCONE E COR MUDAM SE TIVER LIKE
+                          icon: Icon(
+                            isLiked ? Icons.favorite : Icons.favorite_border, 
+                            color: isLiked ? Colors.red : Colors.grey, 
+                            size: 20
+                          ),
+                          label: Text(
+                            "${likes.length}", 
+                            style: TextStyle(color: isLiked ? Colors.red : Colors.grey, fontSize: 12)
+                          ),
                         ),
                       ],
                     )
