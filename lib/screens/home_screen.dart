@@ -27,6 +27,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    // Inicializa o banco de dados ao abrir o app
     DatabaseService().initUserData();
   }
 
@@ -117,8 +118,8 @@ class _HomeContentState extends State<HomeContent> {
     });
   }
 
-  ImageProvider _getThumbnailProvider(String videoUrl) {
-    if (videoUrl.contains("youtube.com") || videoUrl.contains("youtu.be")) {
+  ImageProvider _getThumbnailProvider(String? videoUrl) {
+    if (videoUrl != null && (videoUrl.contains("youtube.com") || videoUrl.contains("youtu.be"))) {
       String? videoId;
       final RegExp regExp = RegExp(
         r'^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*',
@@ -175,19 +176,31 @@ class _HomeContentState extends State<HomeContent> {
         stream: DatabaseService().getModulesStream(), 
         builder: (context, snapshotModules) {
           
+          // Atualiza os slides do Hero com dados reais do Firebase
           if (snapshotModules.hasData && snapshotModules.data!.docs.isNotEmpty) {
             List<Map<String, dynamic>> newSlides = [];
             for (var doc in snapshotModules.data!.docs) {
               var data = doc.data() as Map<String, dynamic>;
+              
+              String title = (data['title'] ?? "Sem Título").toString().toUpperCase();
+              String desc = (data['subtitle'] ?? "Conteúdo exclusivo").toString();
+              String week = "TRILHA ${data['order'] ?? 1}";
+              
+              List lessons = data['lessons'] ?? [];
+              String firstVideoUrl = lessons.isNotEmpty ? (lessons[0]['videoUrl'] ?? "") : "";
+
               newSlides.add({
-                "image": "assets/images/neuroExemploDeAula1.png", 
-                "title": (data['title'] as String).toUpperCase(),
-                "desc": data['subtitle'] ?? "Acesse agora o conteúdo exclusivo.",
-                "week": "TRILHA ${data['order'] ?? 1}"
+                "videoUrl": firstVideoUrl,
+                "title": title,
+                "desc": desc,
+                "week": week
               });
             }
-            if (newSlides.length != _heroSlides.length && newSlides.isNotEmpty) {
-               _heroSlides = newSlides;
+            
+            if (newSlides.isNotEmpty && newSlides.length != _heroSlides.length) {
+               WidgetsBinding.instance.addPostFrameCallback((_) {
+                 if (mounted) setState(() => _heroSlides = newSlides);
+               });
             }
           }
 
@@ -223,10 +236,9 @@ class _HomeContentState extends State<HomeContent> {
 
                     _buildSectionHeader("Trilhas de Conhecimento"),
                     const SizedBox(height: 15),
-                    _buildVideoCarousel([
-                      {"title": "Neuroplasticidade", "subtitle": "Aula 1", "url": "https://assets.mixkit.co/videos/preview/mixkit-waves-in-the-water-1164-large.mp4"},
-                      {"title": "Dopamina Detox", "subtitle": "Aula 2", "url": "https://assets.mixkit.co/videos/preview/mixkit-tree-with-yellow-flowers-1173-large.mp4"},
-                    ], completed, isHistory: false),
+                    
+                    // NOVO CARROSSEL DE TRILHAS (DINÂMICO DO FIREBASE)
+                    _buildTracksCarousel(context, snapshotModules), 
                     
                     const SizedBox(height: 30),
                   ],
@@ -253,7 +265,7 @@ class _HomeContentState extends State<HomeContent> {
               decoration: BoxDecoration(
                 color: const Color(0xFF4A3B32),
                 image: DecorationImage(
-                  image: AssetImage(slide['image']), 
+                  image: _getThumbnailProvider(slide['videoUrl']), 
                   fit: BoxFit.cover,
                 ),
               ),
@@ -314,7 +326,7 @@ class _HomeContentState extends State<HomeContent> {
                          Navigator.push(context, MaterialPageRoute(builder: (context) => const ModulesListScreen()));
                       },
                       icon: const Icon(Icons.play_arrow, color: Colors.white),
-                      label: const Text("Acessar Trilhas", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      label: const Text("Assistir", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                       style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF8B5A2B), padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 12), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
                     ),
                     const SizedBox(width: 15),
@@ -393,9 +405,98 @@ class _HomeContentState extends State<HomeContent> {
     );
   }
 
+  // NOVO CARROSSEL DE TRILHAS (Puxando do Firebase)
+  Widget _buildTracksCarousel(BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
+    if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.only(left: 20),
+        child: Text("Nenhuma trilha disponível ainda.", style: TextStyle(color: Colors.grey)),
+      );
+    }
+
+    var modules = snapshot.data!.docs;
+
+    return SizedBox(
+      height: 280, // Altura ajustada para cards de trilha
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.only(left: 20),
+        physics: const BouncingScrollPhysics(),
+        itemCount: modules.length,
+        itemBuilder: (context, index) {
+          var data = modules[index].data() as Map<String, dynamic>;
+          
+          String title = (data['title'] ?? 'Trilha').toString();
+          String subtitle = "${(data['lessons'] as List? ?? []).length} Aulas";
+          
+          // Pega o link do primeiro vídeo para fazer a capa
+          List lessons = data['lessons'] as List? ?? [];
+          String firstVideoUrl = lessons.isNotEmpty ? (lessons[0]['videoUrl'] ?? "").toString() : "";
+          
+          return _trackCard(context, title, subtitle, firstVideoUrl);
+        },
+      ),
+    );
+  }
+
+  // Card Visual da Trilha
+  Widget _trackCard(BuildContext context, String title, String subtitle, String videoUrl) {
+    return GestureDetector(
+      onTap: () {
+        // Vai para a lista de módulos (que lista todas as trilhas)
+        // Em um app maior, aqui filtraria apenas as aulas dessa trilha
+        Navigator.push(context, MaterialPageRoute(builder: (context) => const ModulesListScreen()));
+      },
+      child: Container(
+        width: 220, // Card mais largo estilo "Série"
+        margin: const EdgeInsets.only(right: 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Stack(
+              children: [
+                Container(
+                  height: 130, // Formato 16:9 aproximado
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    color: const Color(0xFF4A3B32),
+                    image: DecorationImage(
+                      image: _getThumbnailProvider(videoUrl), // Capa dinâmica!
+                      fit: BoxFit.cover,
+                    ),
+                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 5, offset: const Offset(0, 4))],
+                  ),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      gradient: LinearGradient(
+                        begin: Alignment.bottomCenter,
+                        end: Alignment.topCenter,
+                        colors: [Colors.black.withOpacity(0.7), Colors.transparent]
+                      )
+                    ),
+                    // Ícone de "Trilha" ou "Série" no canto
+                    alignment: Alignment.bottomLeft,
+                    padding: const EdgeInsets.all(10),
+                    child: const Icon(Icons.layers, color: Colors.white70, size: 20),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF333333), height: 1.2)),
+            const SizedBox(height: 4),
+            Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, color: Color(0xFF888888))),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Carrossel genérico para "Continuar Assistindo" (vídeos soltos)
   Widget _buildVideoCarousel(List items, List completedList, {bool isHistory = false}) {
     return SizedBox(
-      height: 280, 
+      height: 240, 
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.only(left: 20),
@@ -403,9 +504,9 @@ class _HomeContentState extends State<HomeContent> {
         itemCount: items.length,
         itemBuilder: (context, index) {
           var item = items[index];
-          String title = item['title'] ?? 'Aula';
-          String subtitle = isHistory ? 'Continue assistindo' : (item['subtitle'] ?? 'Aula');
-          String url = item['url'] ?? '';
+          String title = (item['title'] ?? 'Aula').toString();
+          String subtitle = isHistory ? 'Continue assistindo' : (item['subtitle'] ?? 'Aula').toString();
+          String url = (item['url'] ?? '').toString();
           
           return _videoCard(context, title, subtitle, url, completedList.contains(url));
         },
@@ -427,7 +528,7 @@ class _HomeContentState extends State<HomeContent> {
             Stack(
               children: [
                 Container(
-                  height: 160,
+                  height: 160, // Formato Vertical (Aula)
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(12),
                     image: DecorationImage(
@@ -463,14 +564,14 @@ class _HomeContentState extends State<HomeContent> {
   }
 }
 
-// --- TELA DE TRILHAS (DESIGN PREMIUM) ---
+// ... (Mantenha as classes ModulesListScreen e VideoDetailScreen abaixo, elas não mudaram) ...
 class ModulesListScreen extends StatelessWidget {
   const ModulesListScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F2EA), // Fundo Creme
+      backgroundColor: const Color(0xFFF5F2EA),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -482,7 +583,7 @@ class ModulesListScreen extends StatelessWidget {
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator(color: Color(0xFF8B5A2B)));
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(child: Text("Nenhuma trilha disponível.", style: TextStyle(color: Colors.grey)));
+            return const Center(child: Text("Nenhuma trilha encontrada.", style: TextStyle(color: Colors.grey)));
           }
 
           final modules = snapshot.data!.docs;
@@ -500,82 +601,39 @@ class ModulesListScreen extends StatelessWidget {
                 itemCount: modules.length,
                 itemBuilder: (context, index) {
                   final moduleData = modules[index].data() as Map<String, dynamic>;
-                  return _buildTrackTile(context, moduleData, completed);
+                  return _buildModuleTile(context, moduleData['title'] ?? 'Módulo', moduleData['lessons'] as List<dynamic>? ?? [], completed);
                 },
               );
-            },
+            }
           );
         },
       ),
     );
   }
 
-  // Card de Trilha Premium (Dourado/Marrom)
-  Widget _buildTrackTile(BuildContext context, Map<String, dynamic> data, List completedList) {
-    String title = data['title'] ?? 'Trilha';
-    String subtitle = data['subtitle'] ?? 'Explore este tema';
-    List lessons = data['lessons'] as List<dynamic>? ?? [];
-    
-    // Escolhe ícone baseado no título (Lógica simples)
-    IconData icon = _getTrackIcon(title);
-
+  Widget _buildModuleTile(BuildContext context, String title, List<dynamic> lessons, List completedList) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFD4AF37).withOpacity(0.3), width: 1), // Borda dourada sutil
-        boxShadow: [
-          BoxShadow(color: const Color(0xFF8B5A2B).withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4))
-        ],
-      ),
+      margin: const EdgeInsets.only(bottom: 15),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 5)]),
       child: Theme(
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
-          tilePadding: const EdgeInsets.all(15),
-          childrenPadding: const EdgeInsets.only(bottom: 15),
-          // HEADER DO CARTÃO
-          leading: Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF8B5A2B), Color(0xFF6D451F)], // Gradiente Marrom
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight
-              ),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: Colors.white, size: 24),
-          ),
-          title: Text(
-            title.toUpperCase(), 
-            style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14, color: Color(0xFF4A4A4A), letterSpacing: 0.5)
-          ),
-          subtitle: Text(subtitle, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-          iconColor: const Color(0xFFD4AF37), // Ícone de expandir Dourado
+          tilePadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+          title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF4A4A4A))),
+          iconColor: const Color(0xFF8B5A2B),
           collapsedIconColor: Colors.grey,
-          
-          // LISTA DE AULAS
           children: lessons.map((lesson) {
             final lessonMap = lesson as Map<String, dynamic>;
             bool isDone = completedList.contains(lessonMap['videoUrl']);
             return ListTile(
-              contentPadding: const EdgeInsets.only(left: 20, right: 20, bottom: 5),
-              leading: Icon(
-                isDone ? Icons.check_circle : Icons.play_circle_outline, 
-                color: isDone ? Colors.green : const Color(0xFFD4AF37), // Dourado se não visto
-                size: 22
+              contentPadding: const EdgeInsets.only(left: 20, right: 20, bottom: 10),
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(color: isDone ? Colors.green.withOpacity(0.1) : const Color(0xFFF5F2EA), borderRadius: BorderRadius.circular(8)),
+                child: Icon(isDone ? Icons.check : Icons.play_arrow, color: isDone ? Colors.green : const Color(0xFF8B5A2B), size: 20),
               ),
-              title: Text(
-                lessonMap['title'] ?? 'Aula', 
-                style: TextStyle(
-                  fontSize: 14, 
-                  fontWeight: FontWeight.w600, 
-                  color: isDone ? Colors.grey : const Color(0xFF333333),
-                  decoration: isDone ? TextDecoration.lineThrough : null
-                )
-              ),
-              subtitle: Text(lessonMap['duration'] ?? '0 min', style: const TextStyle(fontSize: 11, color: Colors.grey)),
+              title: Text(lessonMap['title'] ?? 'Aula', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, decoration: isDone ? TextDecoration.lineThrough : null, color: isDone ? Colors.grey : Colors.black)),
+              subtitle: Text(lessonMap['duration'] ?? '0 min', style: const TextStyle(fontSize: 12, color: Colors.grey)),
               onTap: () {
                 Navigator.push(context, MaterialPageRoute(builder: (context) => VideoDetailScreen(
                   title: lessonMap['title'] ?? 'Aula', 
@@ -589,25 +647,9 @@ class ModulesListScreen extends StatelessWidget {
       ),
     );
   }
-
-  IconData _getTrackIcon(String title) {
-    title = title.toLowerCase();
-    if (title.contains('boas-vindas')) return Icons.waving_hand;
-    if (title.contains('neurociência')) return FontAwesomeIcons.brain;
-    if (title.contains('constância')) return Icons.repeat;
-    if (title.contains('hábitos')) return Icons.refresh;
-    if (title.contains('saúde mental')) return Icons.spa;
-    if (title.contains('sono')) return Icons.bed;
-    if (title.contains('exercício')) return Icons.fitness_center;
-    if (title.contains('estudo')) return Icons.school;
-    if (title.contains('profissional')) return Icons.rocket_launch;
-    if (title.contains('relacionamentos')) return Icons.favorite;
-    if (title.contains('coruja')) return Icons.visibility; // Olho/Visão
-    return Icons.layers;
-  }
 }
 
-// --- TELA DE DETALHES DO VÍDEO ---
+// --- TELA DE DETALHES DO VÍDEO (COM ALTURA FIXA) ---
 class VideoDetailScreen extends StatefulWidget {
   final String title;
   final String videoUrl;
@@ -736,7 +778,7 @@ class _VideoDetailScreenState extends State<VideoDetailScreen> {
                             ? Chewie(controller: _chewieController!)
                             : const CircularProgressIndicator(color: Color(0xFF8B5A2B))),
                   ),
-                  // Botão de Voltar Flutuante
+                  // Botão de Voltar flutuante
                   Positioned(
                     top: 10, left: 10,
                     child: GestureDetector(

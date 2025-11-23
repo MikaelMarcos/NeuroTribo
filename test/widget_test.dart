@@ -1,30 +1,13 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:neuro_tribo/main.dart';
+import 'package:neuro_tribo/main.dart'; // Importa seu app correto
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('Teste de inicialização do app', (WidgetTester tester) async {
+    // Constrói o app e dispara um frame.
+    // CORREÇÃO: Mudamos de MyApp() para NeuroTriboApp()
+    await tester.pumpWidget(const NeuroTriboApp());
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
-
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
-
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // Como usamos Firebase, testes profundos exigiriam configurações extras (Mocks).
+    // Por enquanto, este teste apenas garante que a classe principal do app existe e compila.
   });
 }

@@ -24,7 +24,7 @@ dependencies:
   url_launcher: ^6.2.5
   timeago: ^3.6.1
 
-  # Firebase e Backend (SEM STORAGE)
+  # Firebase e Backend
   firebase_core: ^2.27.0
   firebase_auth: ^4.17.9
   cloud_firestore: ^4.15.5
@@ -35,6 +35,9 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.0
+  # FERRAMENTAS DE ACABAMENTO (NOVAS)
+  flutter_launcher_icons: ^0.13.1
+  flutter_native_splash: ^2.3.1
 
 flutter:
   uses-material-design: true
@@ -42,3 +45,21 @@ flutter:
   assets:
     - assets/images/
     - assets/audio/
+
+# --- CONFIGURAÇÃO DO ÍCONE DO APP ---
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/images/logo_neurotribo_semfundo.png" # Usa sua logo com fundo (ou sem, se preferir)
+  min_sdk_android: 21 # Importante para Android moderno
+  adaptive_icon_background: "#F5F2EA" # Cor de fundo para ícones adaptativos Android
+  adaptive_icon_foreground: "assets/images/logo_neurotribo_semfundo.png"
+
+# --- CONFIGURAÇÃO DA TELA DE ABERTURA (SPLASH) ---
+flutter_native_splash:
+  color: "#F5F2EA" # Sua cor creme
+  image: "assets/images/logo_neurotribo_semfundo.png" # Logo transparente no meio
+  android_12:
+    image: "assets/images/logo_neurotribo_semfundo.png"
+    color: "#F5F2EA"
+  web: false # Na web o comportamento é diferente, melhor desativar o nativo
