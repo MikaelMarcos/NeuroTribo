@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'login_screen.dart';
+import 'support_screen.dart'; // IMPORTANTE: Importe a tela de ajuda
 import '../user_data.dart';
 import '../services/database_service.dart';
 
@@ -16,7 +17,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   User? user = FirebaseAuth.instance.currentUser;
   final DatabaseService _dbService = DatabaseService();
 
-  // Lista de Avatares Seguros (Imagens leves)
+  // Lista de Avatares Seguros
   final List<String> _avatars = [
     "https://cdn-icons-png.flaticon.com/512/4140/4140048.png", // Raposa
     "https://cdn-icons-png.flaticon.com/512/4140/4140037.png", // Coruja
@@ -35,7 +36,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     });
   }
 
-  // Widget Seguro para exibir imagem de perfil
   Widget _buildProfileImage(String? url, double radius) {
     if (url == null || url.isEmpty) {
       return CircleAvatar(
@@ -51,7 +51,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         width: radius * 2,
         height: radius * 2,
         fit: BoxFit.cover,
-        // AQUI ESTÁ A CORREÇÃO DO ERRO 429:
         errorBuilder: (context, error, stackTrace) {
           return Container(
             width: radius * 2,
@@ -68,7 +67,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // Menu de Escolha de Avatar
   void _showAvatarSelectionDialog() {
     showModalBottomSheet(
       context: context,
@@ -163,7 +161,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   child: Column(
                     children: [
-                      // AVATAR COM BOTÃO DE EDIÇÃO
+                      // AVATAR COM EDIÇÃO
                       Stack(
                         children: [
                           _buildProfileImage(user?.photoURL, 50),
@@ -200,6 +198,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           );
                         },
                       ),
+                      const SizedBox(height: 20),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          _stat("12", "Dias seguidos"),
+                          Container(height: 30, width: 1, color: Colors.grey.shade300, margin: const EdgeInsets.symmetric(horizontal: 20)),
+                          _stat("4", "Módulos"),
+                          Container(height: 30, width: 1, color: Colors.grey.shade300, margin: const EdgeInsets.symmetric(horizontal: 20)),
+                          _stat("8", "Conquistas"),
+                        ],
+                      )
                     ],
                   ),
                 ),
@@ -228,8 +237,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
                   const SizedBox(height: 30),
-                  _menuItem(Icons.settings, "Configurações"),
-                  _menuItem(Icons.help_outline, "Ajuda"),
+                  
+                  _menuItem(Icons.settings, "Configurações", () {}),
+                  _menuItem(Icons.notifications, "Notificações", () {}),
+                  
+                  // --- BOTÃO DE AJUDA CONECTADO AQUI ---
+                  _menuItem(Icons.help_outline, "Ajuda e Suporte", () {
+                    Navigator.push(context, MaterialPageRoute(builder: (context) => const SupportScreen()));
+                  }),
+                  
                   const SizedBox(height: 20),
                   ListTile(
                     leading: const Icon(Icons.logout, color: Colors.red),
@@ -250,22 +266,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
   
+  Widget _stat(String value, String label) {
+    return Column(children: [
+      Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF8B5A2B))),
+      Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+    ]);
+  }
+
   Widget _badge(IconData icon, String label, bool earned) {
     return Container(
       width: 70, margin: const EdgeInsets.only(right: 15),
       padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: earned ? const Color(0xFF8B5A2B).withOpacity(0.1) : Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: earned ? Colors.transparent : Colors.grey.shade200),
-      ),
+      decoration: BoxDecoration(color: earned ? const Color(0xFF8B5A2B).withOpacity(0.1) : Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: earned ? Colors.transparent : Colors.grey.shade200)),
       child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(icon, color: earned ? const Color(0xFF8B5A2B) : Colors.grey.shade300), const SizedBox(height: 5), Text(label, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: earned ? const Color(0xFF8B5A2B) : Colors.grey))]),
     );
   }
-  Widget _menuItem(IconData icon, String title) {
+
+  Widget _menuItem(IconData icon, String title, VoidCallback onTap) {
     return Container(
       margin: const EdgeInsets.only(bottom: 10), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
-      child: ListTile(leading: Icon(icon, color: const Color(0xFF4A4A4A)), title: Text(title), trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey)),
+      child: ListTile(
+        leading: Icon(icon, color: const Color(0xFF4A4A4A)), 
+        title: Text(title, style: const TextStyle(color: Color(0xFF4A4A4A), fontWeight: FontWeight.w500)), 
+        trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+        onTap: onTap, // Agora o onTap funciona
+      ),
     );
   }
 }
